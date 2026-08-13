@@ -1,0 +1,24 @@
+{
+  "name": "Wallet SMS Importer",
+  "image": "mcr.microsoft.com/devcontainers/base:ubuntu-24.04",
+  "features": {
+    "ghcr.io/devcontainers/features/java:1": {
+      "version": "17",
+      "distribution": "temurin"
+    },
+    "ghcr.io/nordcominc/devcontainer-features/android-sdk:1": {
+    "platforms": "37",
+    "buildTools": "37.0.0",
+     "ndk": "none"
+    }
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "vscjava.vscode-gradle",
+        "fwcd.kotlin",
+        "redhat.vscode-xml"
+      ]
+    }
+  }
+}
