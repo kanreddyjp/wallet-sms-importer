@@ -6,6 +6,7 @@ ARG JAVA_VERSION=17
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
         openjdk-${JAVA_VERSION}-jdk \
+        git-lfs \
         unzip \
         wget \
         ca-certificates \
