@@ -29,8 +29,8 @@ RUN mkdir -p ${ANDROID_HOME}/cmdline-tools \
     && yes | sdkmanager --licenses >/dev/null \
     && sdkmanager \
         "platform-tools" \
-        "platforms;android-37.0" \
+        "platforms;android-35" \
         "build-tools;35.0.1" \
-    && chmod -R a+rX ${ANDROID_HOME}
+    && chown -R vscode:vscode ${ANDROID_HOME}
 
 WORKDIR /workspaces/wallet-sms-importer
