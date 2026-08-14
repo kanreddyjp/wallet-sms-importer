@@ -7,12 +7,15 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import com.kanreddyjp.walletsmsimporter.sms.SmsMessage
 import com.kanreddyjp.walletsmsimporter.ui.screens.HomeScreen
+import com.kanreddyjp.walletsmsimporter.wallet.WalletConnectionState
 
 @Composable
 fun WalletSmsImporterApp(
     smsMessages: List<SmsMessage>,
     scanStatus: String,
-    onScanSms: () -> Unit
+    onScanSms: () -> Unit,
+    walletConnectionState: WalletConnectionState,
+    onConnectWallet: (String) -> Unit
 ) {
     MaterialTheme {
         Surface(
@@ -21,7 +24,9 @@ fun WalletSmsImporterApp(
             HomeScreen(
                 smsMessages = smsMessages,
                 scanStatus = scanStatus,
-                onScanSms = onScanSms
+                onScanSms = onScanSms,
+                walletConnectionState = walletConnectionState,
+                onConnectWallet = onConnectWallet
             )
         }
     }
