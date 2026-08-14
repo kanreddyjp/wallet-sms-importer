@@ -15,7 +15,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 
 @Composable
-fun HomeScreen() {
+fun HomeScreen(
+    smsCount: Int,
+    scanStatus: String,
+    onScanSms: () -> Unit
+) {
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -30,18 +34,20 @@ fun HomeScreen() {
 
         Spacer(modifier = Modifier.height(32.dp))
 
-        Text(text = "Last scan: Never")
+        Text(
+            text = "Status: $scanStatus"
+        )
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        Text(text = "Transactions found: 0")
+        Text(
+            text = "SMS messages found: $smsCount"
+        )
 
         Spacer(modifier = Modifier.height(32.dp))
 
         Button(
-            onClick = {
-                // SMS scanning will be implemented later.
-            }
+            onClick = onScanSms
         ) {
             Text("Scan SMS")
         }
