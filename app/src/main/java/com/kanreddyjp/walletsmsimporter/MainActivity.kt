@@ -14,7 +14,6 @@ import androidx.lifecycle.lifecycleScope
 import com.kanreddyjp.walletsmsimporter.sms.SmsMessage
 import com.kanreddyjp.walletsmsimporter.sms.SmsReader
 import com.kanreddyjp.walletsmsimporter.ui.WalletSmsImporterApp
-import com.kanreddyjp.walletsmsimporter.wallet.WalletApiClient
 import com.kanreddyjp.walletsmsimporter.wallet.WalletConnectionState
 import com.kanreddyjp.walletsmsimporter.wallet.WalletLocalStore
 import com.kanreddyjp.walletsmsimporter.wallet.WalletRepository
@@ -27,13 +26,14 @@ class MainActivity : ComponentActivity() {
 
     private var smsMessages by mutableStateOf<List<SmsMessage>>(emptyList())
     private var scanStatus by mutableStateOf("Never scanned")
-    private lateinit var walletTokenStore: WalletTokenStore
-    private lateinit var walletLocalStore: WalletLocalStore
-    private lateinit var walletRepository: WalletRepository
 
     private var walletConnectionState by mutableStateOf<WalletConnectionState>(
         WalletConnectionState.Disconnected
     )
+
+    private lateinit var walletTokenStore: WalletTokenStore
+    private lateinit var walletLocalStore: WalletLocalStore
+    private lateinit var walletRepository: WalletRepository
 
     private val smsPermissionLauncher =
         registerForActivityResult(
@@ -56,6 +56,8 @@ class MainActivity : ComponentActivity() {
             tokenStore = walletTokenStore,
             localStore = walletLocalStore
         )
+
+        // Restore Wallet connection state from local cache.
         if (
             walletTokenStore.hasToken() &&
             walletLocalStore.hasWalletData()
@@ -69,13 +71,16 @@ class MainActivity : ComponentActivity() {
                     categoryCount = categories.size
                 )
         }
+
         setContent {
             WalletSmsImporterApp(
                 smsMessages = smsMessages,
                 scanStatus = scanStatus,
                 onScanSms = ::requestSmsPermission,
                 walletConnectionState = walletConnectionState,
-                onConnectWallet = ::connectWallet
+                onConnectWallet = ::connectWallet,
+                accounts = walletRepository.getCachedAccounts(),
+                categories = walletRepository.getCachedCategories()
             )
         }
     }

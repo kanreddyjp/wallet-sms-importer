@@ -38,26 +38,23 @@ fun HomeScreen(
     scanStatus: String,
     onScanSms: () -> Unit,
     walletConnectionState: WalletConnectionState,
-    onConnectWallet: (String) -> Unit
+    onConnectWallet: (String) -> Unit,
+    onCreateTransaction: (SmsMessage) -> Unit
 ) {
     var showConnectDialog by remember {
         mutableStateOf(false)
     }
 
     Column(
-        modifier = Modifier.fillMaxSize()
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(top = 56.dp)
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(16.dp)
         ) {
-            Text(
-                text = "Wallet SMS Importer",
-                style = MaterialTheme.typography.headlineMedium
-            )
-
-            Spacer(modifier = Modifier.height(16.dp))
 
             WalletConnectionSection(
                 state = walletConnectionState,
@@ -97,7 +94,10 @@ fun HomeScreen(
                     "${message.timestamp}-${message.sender}-${message.body}"
                 }
             ) { message ->
-                SmsCard(message)
+                SmsCard(
+                    message = message,
+                    onCreateTransaction = onCreateTransaction
+                )
             }
         }
     }
@@ -254,7 +254,10 @@ private fun WalletTokenDialog(
 }
 
 @Composable
-private fun SmsCard(message: SmsMessage) {
+private fun SmsCard(
+    message: SmsMessage,
+    onCreateTransaction: (SmsMessage) -> Unit
+) {
     Card(
         modifier = Modifier.fillMaxWidth()
     ) {
@@ -279,6 +282,16 @@ private fun SmsCard(message: SmsMessage) {
                 text = message.body ?: "",
                 style = MaterialTheme.typography.bodyMedium
             )
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            Button(
+                onClick = {
+                    onCreateTransaction(message)
+                }
+            ) {
+                Text("Create Transaction")
+            }
         }
     }
 }
