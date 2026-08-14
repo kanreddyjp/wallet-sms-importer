@@ -10,19 +10,19 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.core.content.ContextCompat
+import com.kanreddyjp.walletsmsimporter.sms.SmsMessage
 import com.kanreddyjp.walletsmsimporter.sms.SmsReader
 import com.kanreddyjp.walletsmsimporter.ui.WalletSmsImporterApp
 
 class MainActivity : ComponentActivity() {
 
-    private var smsCount by mutableStateOf(0)
+    private var smsMessages by mutableStateOf<List<SmsMessage>>(emptyList())
     private var scanStatus by mutableStateOf("Never scanned")
 
     private val smsPermissionLauncher =
         registerForActivityResult(
             ActivityResultContracts.RequestPermission()
         ) { granted ->
-
             if (granted) {
                 scanSms()
             } else {
@@ -35,7 +35,7 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             WalletSmsImporterApp(
-                smsCount = smsCount,
+                smsMessages = smsMessages,
                 scanStatus = scanStatus,
                 onScanSms = ::requestSmsPermission
             )
@@ -64,7 +64,7 @@ class MainActivity : ComponentActivity() {
 
         val messages = SmsReader(this).readInbox()
 
-        smsCount = messages.size
-        scanStatus = "Scan complete"
+        smsMessages = messages
+        scanStatus = "Scan complete — ${messages.size} messages"
     }
 }

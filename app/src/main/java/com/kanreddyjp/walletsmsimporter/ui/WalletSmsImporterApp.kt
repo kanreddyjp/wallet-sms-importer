@@ -5,11 +5,12 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import com.kanreddyjp.walletsmsimporter.sms.SmsMessage
 import com.kanreddyjp.walletsmsimporter.ui.screens.HomeScreen
 
 @Composable
 fun WalletSmsImporterApp(
-    smsCount: Int,
+    smsMessages: List<SmsMessage>,
     scanStatus: String,
     onScanSms: () -> Unit
 ) {
@@ -18,7 +19,7 @@ fun WalletSmsImporterApp(
             modifier = Modifier.fillMaxSize()
         ) {
             HomeScreen(
-                smsCount = smsCount,
+                smsMessages = smsMessages,
                 scanStatus = scanStatus,
                 onScanSms = onScanSms
             )
