@@ -3,6 +3,7 @@ package com.kanreddyjp.walletsmsimporter.ui.screens
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -15,16 +16,19 @@ import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.kanreddyjp.walletsmsimporter.sms.SmsMessage
 import com.kanreddyjp.walletsmsimporter.transaction.TransactionDraft
+import com.kanreddyjp.walletsmsimporter.transaction.TransactionType
 import com.kanreddyjp.walletsmsimporter.wallet.WalletAccount
 import com.kanreddyjp.walletsmsimporter.wallet.WalletCategory
 import java.text.SimpleDateFormat
@@ -43,7 +47,8 @@ fun TransactionDraftScreen(
         amount: Double,
         category: WalletCategory?,
         counterParty: String,
-        note: String
+        note: String,
+        type: TransactionType
     ) -> Unit
 ) {
     var selectedAccount by remember(sms, initialDraft, accounts) {
@@ -69,6 +74,10 @@ fun TransactionDraftScreen(
 
     var note by remember(sms, initialDraft) {
         mutableStateOf(initialDraft?.note ?: "")
+    }
+
+    var transactionType by remember(sms, initialDraft) {
+        mutableStateOf(initialDraft?.type ?: TransactionType.EXPENSE)
     }
 
     var accountMenuExpanded by remember { mutableStateOf(false) }
@@ -105,6 +114,45 @@ fun TransactionDraftScreen(
             text = "Wallet Transaction",
             style = MaterialTheme.typography.titleMedium
         )
+
+        Text(
+            text = "Transaction type",
+            style = MaterialTheme.typography.labelLarge
+        )
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            Row(
+                modifier = Modifier.weight(1f),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                RadioButton(
+                    selected = transactionType == TransactionType.EXPENSE,
+                    onClick = { transactionType = TransactionType.EXPENSE }
+                )
+                Text(
+                    text = "Expense",
+                    modifier = Modifier.padding(start = 4.dp)
+                )
+            }
+
+            Row(
+                modifier = Modifier.weight(1f),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                RadioButton(
+                    selected = transactionType == TransactionType.INCOME,
+                    onClick = { transactionType = TransactionType.INCOME }
+                )
+                Text(
+                    text = "Income",
+                    modifier = Modifier.padding(start = 4.dp)
+                )
+            }
+        }
 
         ExposedDropdownMenuBox(
             expanded = accountMenuExpanded,
@@ -222,11 +270,14 @@ fun TransactionDraftScreen(
                     parsedAmount,
                     selectedCategory,
                     counterParty,
-                    note
+                    note,
+                    transactionType
                 )
             },
             enabled = selectedAccount != null &&
-                amount.toDoubleOrNull() != null,
+                amount.toDoubleOrNull()?.let {
+                    it.isFinite() && it > 0.0
+                } == true,
             modifier = Modifier.fillMaxWidth()
         ) {
             Text("Review Transaction")

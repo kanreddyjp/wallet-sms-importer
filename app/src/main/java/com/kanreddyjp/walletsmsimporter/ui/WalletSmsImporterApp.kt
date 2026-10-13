@@ -12,6 +12,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import com.kanreddyjp.walletsmsimporter.sms.SmsMessage
 import com.kanreddyjp.walletsmsimporter.transaction.TransactionDraft
+import com.kanreddyjp.walletsmsimporter.transaction.TransactionType
 import com.kanreddyjp.walletsmsimporter.ui.screens.HomeScreen
 import com.kanreddyjp.walletsmsimporter.ui.screens.TransactionDraftScreen
 import com.kanreddyjp.walletsmsimporter.ui.screens.TransactionReviewScreen
@@ -42,9 +43,7 @@ fun WalletSmsImporterApp(
     }
 
     MaterialTheme {
-        Surface(
-            modifier = Modifier.fillMaxSize()
-        ) {
+        Surface(modifier = Modifier.fillMaxSize()) {
             val sms = selectedSms
 
             when {
@@ -66,9 +65,7 @@ fun WalletSmsImporterApp(
                 isReviewing && currentDraft != null -> {
                     TransactionReviewScreen(
                         draft = currentDraft!!,
-                        onEdit = {
-                            isReviewing = false
-                        }
+                        onEdit = { isReviewing = false }
                     )
                 }
 
@@ -78,7 +75,13 @@ fun WalletSmsImporterApp(
                         accounts = accounts,
                         categories = categories,
                         initialDraft = currentDraft,
-                        onReview = { account, amount, category, counterParty, note ->
+                        onReview = {
+                                account,
+                                amount,
+                                category,
+                                counterParty,
+                                note,
+                                type ->
                             currentDraft = TransactionDraft(
                                 accountId = account.id,
                                 accountName = account.name,
@@ -87,7 +90,8 @@ fun WalletSmsImporterApp(
                                 categoryName = category?.name,
                                 recordDate = sms.timestamp,
                                 counterParty = counterParty,
-                                note = note
+                                note = note,
+                                type = type
                             )
                             isReviewing = true
                         }

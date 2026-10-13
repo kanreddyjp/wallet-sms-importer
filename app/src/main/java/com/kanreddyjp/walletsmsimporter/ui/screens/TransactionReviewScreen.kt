@@ -16,6 +16,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.kanreddyjp.walletsmsimporter.transaction.TransactionDraft
+import com.kanreddyjp.walletsmsimporter.transaction.TransactionType
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -42,8 +43,18 @@ fun TransactionReviewScreen(
             style = MaterialTheme.typography.bodyMedium
         )
 
+        ReviewField("Transaction type", when (draft.type) {
+            TransactionType.EXPENSE -> "Expense"
+            TransactionType.INCOME -> "Income"
+        })
+
         ReviewField("Account", draft.accountName)
-        ReviewField("Amount", draft.amount.toString())
+
+        ReviewField(
+            "Amount",
+            String.format(Locale.getDefault(), "%.2f", draft.amount)
+        )
+
         ReviewField("Category", draft.categoryName ?: "Not selected")
         ReviewField("Counterparty", draft.counterParty.ifBlank { "Not entered" })
         ReviewField("Note", draft.note.ifBlank { "Not entered" })
