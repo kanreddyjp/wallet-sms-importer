@@ -1,4 +1,7 @@
+
 package com.kanreddyjp.walletsmsimporter.wallet
+
+import com.kanreddyjp.walletsmsimporter.transaction.TransactionDraft
 
 class WalletRepository(
     private val tokenStore: WalletTokenStore,
@@ -23,9 +26,7 @@ class WalletRepository(
 
     fun sync(): SyncResult {
         val token = tokenStore.getToken()
-            ?: throw IllegalStateException(
-                "Wallet is not connected"
-            )
+            ?: throw IllegalStateException("Wallet is not connected")
 
         val apiClient = WalletApiClient(token)
 
@@ -36,7 +37,6 @@ class WalletRepository(
         localStore.saveCategories(categories)
 
         val syncTime = System.currentTimeMillis()
-
         localStore.saveLastSync(syncTime)
 
         return SyncResult(
@@ -44,6 +44,15 @@ class WalletRepository(
             categoryCount = categories.size,
             timestamp = syncTime
         )
+    }
+
+    fun createRecord(
+        draft: TransactionDraft
+    ): WalletRecordCreationResult {
+        val token = tokenStore.getToken()
+            ?: throw IllegalStateException("Wallet is not connected")
+
+        return WalletApiClient(token).createRecord(draft)
     }
 }
 

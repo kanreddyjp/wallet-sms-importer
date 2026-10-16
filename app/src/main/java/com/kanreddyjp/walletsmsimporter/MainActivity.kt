@@ -1,3 +1,4 @@
+
 package com.kanreddyjp.walletsmsimporter
 
 import android.Manifest
@@ -13,9 +14,11 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
 import com.kanreddyjp.walletsmsimporter.sms.SmsMessage
 import com.kanreddyjp.walletsmsimporter.sms.SmsReader
+import com.kanreddyjp.walletsmsimporter.transaction.TransactionDraft
 import com.kanreddyjp.walletsmsimporter.ui.WalletSmsImporterApp
 import com.kanreddyjp.walletsmsimporter.wallet.WalletConnectionState
 import com.kanreddyjp.walletsmsimporter.wallet.WalletLocalStore
+import com.kanreddyjp.walletsmsimporter.wallet.WalletRecordSubmissionState
 import com.kanreddyjp.walletsmsimporter.wallet.WalletRepository
 import com.kanreddyjp.walletsmsimporter.wallet.WalletTokenStore
 import kotlinx.coroutines.Dispatchers
@@ -29,6 +32,10 @@ class MainActivity : ComponentActivity() {
 
     private var walletConnectionState by mutableStateOf<WalletConnectionState>(
         WalletConnectionState.Disconnected
+    )
+
+    private var submissionState by mutableStateOf<WalletRecordSubmissionState>(
+        WalletRecordSubmissionState.Idle
     )
 
     private lateinit var walletTokenStore: WalletTokenStore
@@ -57,7 +64,6 @@ class MainActivity : ComponentActivity() {
             localStore = walletLocalStore
         )
 
-        // Restore Wallet connection state from local cache.
         if (
             walletTokenStore.hasToken() &&
             walletLocalStore.hasWalletData()
@@ -80,7 +86,12 @@ class MainActivity : ComponentActivity() {
                 walletConnectionState = walletConnectionState,
                 onConnectWallet = ::connectWallet,
                 accounts = walletRepository.getCachedAccounts(),
-                categories = walletRepository.getCachedCategories()
+                categories = walletRepository.getCachedCategories(),
+                submissionState = submissionState,
+                onSubmitTransaction = ::submitTransaction,
+                onResetSubmission = {
+                    submissionState = WalletRecordSubmissionState.Idle
+                }
             )
         }
     }
@@ -127,14 +138,40 @@ class MainActivity : ComponentActivity() {
                         accountCount = result.accountCount,
                         categoryCount = result.categoryCount
                     )
-
             } catch (exception: Exception) {
                 walletTokenStore.clearToken()
 
                 walletConnectionState =
                     WalletConnectionState.Error(
-                        exception.message
-                            ?: "Unable to connect to Wallet"
+                        exception.message ?: "Unable to connect to Wallet"
+                    )
+            }
+        }
+    }
+
+    private fun submitTransaction(draft: TransactionDraft) {
+        if (
+            submissionState !is WalletRecordSubmissionState.Idle
+        ) {
+            return
+        }
+
+        submissionState = WalletRecordSubmissionState.Submitting
+
+        lifecycleScope.launch {
+            try {
+                val result = withContext(Dispatchers.IO) {
+                    walletRepository.createRecord(draft)
+                }
+
+                submissionState =
+                    WalletRecordSubmissionState.Success(result.message)
+            } catch (exception: Exception) {
+                submissionState =
+                    WalletRecordSubmissionState.Unconfirmed(
+                        "Wallet did not confirm successful creation. " +
+                            "Check your Wallet records before trying again. " +
+                            "Details: ${exception.message ?: "No additional details"}"
                     )
             }
         }

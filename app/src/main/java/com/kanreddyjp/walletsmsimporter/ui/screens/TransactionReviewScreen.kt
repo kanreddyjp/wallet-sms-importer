@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
@@ -17,6 +18,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.kanreddyjp.walletsmsimporter.transaction.TransactionDraft
 import com.kanreddyjp.walletsmsimporter.transaction.TransactionType
+import com.kanreddyjp.walletsmsimporter.wallet.WalletRecordSubmissionState
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -24,8 +26,14 @@ import java.util.Locale
 @Composable
 fun TransactionReviewScreen(
     draft: TransactionDraft,
-    onEdit: () -> Unit
+    submissionState: WalletRecordSubmissionState,
+    onEdit: () -> Unit,
+    onSubmit: () -> Unit,
+    onDone: () -> Unit
 ) {
+    val submissionAttempted =
+        submissionState !is WalletRecordSubmissionState.Idle
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -39,14 +47,17 @@ fun TransactionReviewScreen(
         )
 
         Text(
-            text = "Please verify the details before proceeding.",
+            text = "Verify the details before submitting to Wallet.",
             style = MaterialTheme.typography.bodyMedium
         )
 
-        ReviewField("Transaction type", when (draft.type) {
-            TransactionType.EXPENSE -> "Expense"
-            TransactionType.INCOME -> "Income"
-        })
+        ReviewField(
+            "Transaction type",
+            when (draft.type) {
+                TransactionType.EXPENSE -> "Expense"
+                TransactionType.INCOME -> "Income"
+            }
+        )
 
         ReviewField("Account", draft.accountName)
 
@@ -60,19 +71,52 @@ fun TransactionReviewScreen(
         ReviewField("Note", draft.note.ifBlank { "Not entered" })
         ReviewField("Transaction date", formatDate(draft.recordDate))
 
-        OutlinedButton(
-            onClick = onEdit,
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Text("Edit Transaction")
+        when (val state = submissionState) {
+            WalletRecordSubmissionState.Idle -> Unit
+
+            WalletRecordSubmissionState.Submitting -> {
+                CircularProgressIndicator()
+                Text("Submitting transaction to Wallet...")
+            }
+
+            is WalletRecordSubmissionState.Success -> {
+                Text(
+                    text = state.message,
+                    color = MaterialTheme.colorScheme.primary,
+                    style = MaterialTheme.typography.bodyLarge
+                )
+            }
+
+            is WalletRecordSubmissionState.Unconfirmed -> {
+                Text(
+                    text = state.message,
+                    color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.bodyLarge
+                )
+            }
         }
 
-        Button(
-            onClick = {},
-            enabled = false,
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Text("Submit to Wallet (coming later)")
+        if (!submissionAttempted) {
+            OutlinedButton(
+                onClick = onEdit,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("Edit Transaction")
+            }
+
+            Button(
+                onClick = onSubmit,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("Confirm and Submit to Wallet")
+            }
+        } else if (submissionState !is WalletRecordSubmissionState.Submitting) {
+            Button(
+                onClick = onDone,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("Done")
+            }
         }
     }
 }

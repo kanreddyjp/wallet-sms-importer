@@ -19,6 +19,7 @@ import com.kanreddyjp.walletsmsimporter.ui.screens.TransactionReviewScreen
 import com.kanreddyjp.walletsmsimporter.wallet.WalletAccount
 import com.kanreddyjp.walletsmsimporter.wallet.WalletCategory
 import com.kanreddyjp.walletsmsimporter.wallet.WalletConnectionState
+import com.kanreddyjp.walletsmsimporter.wallet.WalletRecordSubmissionState
 
 @Composable
 fun WalletSmsImporterApp(
@@ -28,7 +29,10 @@ fun WalletSmsImporterApp(
     walletConnectionState: WalletConnectionState,
     onConnectWallet: (String) -> Unit,
     accounts: List<WalletAccount>,
-    categories: List<WalletCategory>
+    categories: List<WalletCategory>,
+    submissionState: WalletRecordSubmissionState,
+    onSubmitTransaction: (TransactionDraft) -> Unit,
+    onResetSubmission: () -> Unit
 ) {
     var selectedSms by remember {
         mutableStateOf<SmsMessage?>(null)
@@ -55,6 +59,7 @@ fun WalletSmsImporterApp(
                         walletConnectionState = walletConnectionState,
                         onConnectWallet = onConnectWallet,
                         onCreateTransaction = { message ->
+                            onResetSubmission()
                             selectedSms = message
                             currentDraft = null
                             isReviewing = false
@@ -65,7 +70,19 @@ fun WalletSmsImporterApp(
                 isReviewing && currentDraft != null -> {
                     TransactionReviewScreen(
                         draft = currentDraft!!,
-                        onEdit = { isReviewing = false }
+                        submissionState = submissionState,
+                        onEdit = {
+                            isReviewing = false
+                        },
+                        onSubmit = {
+                            currentDraft?.let(onSubmitTransaction)
+                        },
+                        onDone = {
+                            selectedSms = null
+                            currentDraft = null
+                            isReviewing = false
+                            onResetSubmission()
+                        }
                     )
                 }
 
@@ -76,12 +93,12 @@ fun WalletSmsImporterApp(
                         categories = categories,
                         initialDraft = currentDraft,
                         onReview = {
-                                account,
-                                amount,
-                                category,
-                                counterParty,
-                                note,
-                                type ->
+                            account,
+                            amount,
+                            category,
+                            counterParty,
+                            note,
+                            type ->
                             currentDraft = TransactionDraft(
                                 accountId = account.id,
                                 accountName = account.name,
