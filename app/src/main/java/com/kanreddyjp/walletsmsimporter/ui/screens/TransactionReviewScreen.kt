@@ -3,19 +3,28 @@ package com.kanreddyjp.walletsmsimporter.ui.screens
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.kanreddyjp.walletsmsimporter.sms.SmsMessage
 import com.kanreddyjp.walletsmsimporter.transaction.TransactionDraft
 import com.kanreddyjp.walletsmsimporter.transaction.TransactionType
 import com.kanreddyjp.walletsmsimporter.wallet.WalletRecordSubmissionState
@@ -25,14 +34,27 @@ import java.util.Locale
 
 @Composable
 fun TransactionReviewScreen(
+    sms: SmsMessage,
     draft: TransactionDraft,
     submissionState: WalletRecordSubmissionState,
+    savedSenderHeaders: List<String>,
+    onRemoveSenderHeader: (String) -> Unit,
     onEdit: () -> Unit,
-    onSubmit: () -> Unit,
+    onSubmit: (Boolean) -> Unit,
+    onBackToSmsList: () -> Unit,
     onDone: () -> Unit
 ) {
     val submissionAttempted =
         submissionState !is WalletRecordSubmissionState.Idle
+
+    val sender = sms.sender?.trim().orEmpty()
+    val senderAlreadySaved = savedSenderHeaders.any {
+        it.equals(sender, ignoreCase = true)
+    }
+
+    var rememberSenderHeader by remember(sms.id, savedSenderHeaders) {
+        mutableStateOf(sender.isNotBlank() && !senderAlreadySaved)
+    }
 
     Column(
         modifier = Modifier
@@ -71,6 +93,73 @@ fun TransactionReviewScreen(
         ReviewField("Note", draft.note.ifBlank { "Not entered" })
         ReviewField("Transaction date", formatDate(draft.recordDate))
 
+        Column(
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Text(
+                text = "SMS sender header",
+                style = MaterialTheme.typography.titleMedium
+            )
+
+            Text(sender.ifBlank { "Unknown sender" })
+
+            if (sender.isNotBlank() && !senderAlreadySaved) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Checkbox(
+                        checked = rememberSenderHeader,
+                        onCheckedChange = { rememberSenderHeader = it },
+                        enabled = !submissionAttempted
+                    )
+
+                    Text("Remember this sender as a bank SMS header")
+                }
+            } else if (senderAlreadySaved) {
+                Text(
+                    text = "This sender is already saved.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.primary
+                )
+            }
+        }
+
+        Column(
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Text(
+                text = "Saved bank SMS headers",
+                style = MaterialTheme.typography.titleMedium
+            )
+
+            if (savedSenderHeaders.isEmpty()) {
+                Text(
+                    text = "No headers saved yet.",
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            } else {
+                savedSenderHeaders.forEach { header ->
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = header,
+                            modifier = Modifier.weight(1f),
+                            style = MaterialTheme.typography.bodyLarge
+                        )
+
+                        TextButton(
+                            onClick = { onRemoveSenderHeader(header) },
+                            enabled = !submissionAttempted
+                        ) {
+                            Text("Delete")
+                        }
+                    }
+                }
+            }
+        }
+
         when (val state = submissionState) {
             WalletRecordSubmissionState.Idle -> Unit
 
@@ -95,7 +184,17 @@ fun TransactionReviewScreen(
                 )
             }
         }
-
+        if (
+            submissionState is WalletRecordSubmissionState.Idle ||
+            submissionState is WalletRecordSubmissionState.Unconfirmed
+        ) {
+            OutlinedButton(
+                onClick = onBackToSmsList,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("Back to SMS list")
+            }
+        }
         if (!submissionAttempted) {
             OutlinedButton(
                 onClick = onEdit,
@@ -105,7 +204,7 @@ fun TransactionReviewScreen(
             }
 
             Button(
-                onClick = onSubmit,
+                onClick = { onSubmit(rememberSenderHeader) },
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Text("Confirm and Submit to Wallet")

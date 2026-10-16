@@ -1,8 +1,10 @@
+
 package com.kanreddyjp.walletsmsimporter.ui.screens
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -39,7 +41,8 @@ fun HomeScreen(
     onScanSms: () -> Unit,
     walletConnectionState: WalletConnectionState,
     onConnectWallet: (String) -> Unit,
-    onCreateTransaction: (SmsMessage) -> Unit
+    onCreateTransaction: (SmsMessage) -> Unit,
+    onIgnoreSms: (SmsMessage) -> Unit
 ) {
     var showConnectDialog by remember {
         mutableStateOf(false)
@@ -55,7 +58,6 @@ fun HomeScreen(
                 .fillMaxWidth()
                 .padding(16.dp)
         ) {
-
             WalletConnectionSection(
                 state = walletConnectionState,
                 onConnect = {
@@ -72,11 +74,17 @@ fun HomeScreen(
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            Button(
-                onClick = onScanSms
-            ) {
+            Button(onClick = onScanSms) {
                 Text("Scan SMS")
             }
+        }
+
+        if (smsMessages.isEmpty()) {
+            Text(
+                text = "No pending SMS messages.",
+                modifier = Modifier.padding(horizontal = 16.dp),
+                style = MaterialTheme.typography.bodyMedium
+            )
         }
 
         LazyColumn(
@@ -89,14 +97,15 @@ fun HomeScreen(
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             items(
-                items = smsMessages,
-                key = { message ->
-                    "${message.timestamp}-${message.sender}-${message.body}"
-                }
+                items = smsMessages.sortedWith(
+                    compareBy<SmsMessage> { it.timestamp }.thenBy { it.id }
+                ),
+                key = { message -> message.id }
             ) { message ->
                 SmsCard(
                     message = message,
-                    onCreateTransaction = onCreateTransaction
+                    onCreateTransaction = onCreateTransaction,
+                    onIgnoreSms = onIgnoreSms
                 )
             }
         }
@@ -120,12 +129,8 @@ private fun WalletConnectionSection(
     state: WalletConnectionState,
     onConnect: () -> Unit
 ) {
-    Card(
-        modifier = Modifier.fillMaxWidth()
-    ) {
-        Column(
-            modifier = Modifier.padding(16.dp)
-        ) {
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Column(modifier = Modifier.padding(16.dp)) {
             Text(
                 text = "Wallet",
                 style = MaterialTheme.typography.titleLarge
@@ -136,9 +141,7 @@ private fun WalletConnectionSection(
             when (state) {
                 WalletConnectionState.Disconnected -> {
                     Text("Not connected")
-
                     Spacer(modifier = Modifier.height(8.dp))
-
                     Button(onClick = onConnect) {
                         Text("Connect Wallet")
                     }
@@ -146,9 +149,7 @@ private fun WalletConnectionSection(
 
                 WalletConnectionState.Connecting -> {
                     CircularProgressIndicator()
-
                     Spacer(modifier = Modifier.height(8.dp))
-
                     Text("Connecting to Wallet...")
                 }
 
@@ -157,9 +158,7 @@ private fun WalletConnectionSection(
                         text = "✓ Connected",
                         color = MaterialTheme.colorScheme.primary
                     )
-
                     Spacer(modifier = Modifier.height(4.dp))
-
                     Text("Accounts: ${state.accountCount}")
                     Text("Categories: ${state.categoryCount}")
                 }
@@ -169,13 +168,9 @@ private fun WalletConnectionSection(
                         text = "Connection failed",
                         color = MaterialTheme.colorScheme.error
                     )
-
                     Spacer(modifier = Modifier.height(4.dp))
-
                     Text(state.message)
-
                     Spacer(modifier = Modifier.height(8.dp))
-
                     Button(onClick = onConnect) {
                         Text("Try Again")
                     }
@@ -197,9 +192,7 @@ private fun WalletTokenDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = {
-            Text("Connect Wallet")
-        },
+        title = { Text("Connect Wallet") },
         text = {
             Column {
                 Text(
@@ -212,25 +205,18 @@ private fun WalletTokenDialog(
                 OutlinedTextField(
                     value = token,
                     onValueChange = { token = it },
-                    label = {
-                        Text("API Token")
-                    },
+                    label = { Text("API Token") },
                     singleLine = true,
-                    visualTransformation =
-                        PasswordVisualTransformation(),
-                    enabled =
-                        state !is WalletConnectionState.Connecting
+                    visualTransformation = PasswordVisualTransformation(),
+                    enabled = state !is WalletConnectionState.Connecting
                 )
             }
         },
         confirmButton = {
             Button(
-                onClick = {
-                    onConnect(token.trim())
-                },
-                enabled =
-                    token.isNotBlank() &&
-                        state !is WalletConnectionState.Connecting
+                onClick = { onConnect(token.trim()) },
+                enabled = token.isNotBlank() &&
+                    state !is WalletConnectionState.Connecting
             ) {
                 Text(
                     if (state is WalletConnectionState.Connecting) {
@@ -244,8 +230,7 @@ private fun WalletTokenDialog(
         dismissButton = {
             TextButton(
                 onClick = onDismiss,
-                enabled =
-                    state !is WalletConnectionState.Connecting
+                enabled = state !is WalletConnectionState.Connecting
             ) {
                 Text("Cancel")
             }
@@ -256,14 +241,11 @@ private fun WalletTokenDialog(
 @Composable
 private fun SmsCard(
     message: SmsMessage,
-    onCreateTransaction: (SmsMessage) -> Unit
+    onCreateTransaction: (SmsMessage) -> Unit,
+    onIgnoreSms: (SmsMessage) -> Unit
 ) {
-    Card(
-        modifier = Modifier.fillMaxWidth()
-    ) {
-        Column(
-            modifier = Modifier.padding(16.dp)
-        ) {
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Column(modifier = Modifier.padding(16.dp)) {
             Text(
                 text = message.sender ?: "Unknown sender",
                 style = MaterialTheme.typography.titleMedium
@@ -279,18 +261,28 @@ private fun SmsCard(
             Spacer(modifier = Modifier.height(12.dp))
 
             Text(
-                text = message.body ?: "",
+                text = message.body.orEmpty(),
                 style = MaterialTheme.typography.bodyMedium
             )
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            Button(
-                onClick = {
-                    onCreateTransaction(message)
-                }
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Text("Create Transaction")
+                Button(
+                    onClick = { onCreateTransaction(message) },
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Text("Create Transaction")
+                }
+
+                TextButton(
+                    onClick = { onIgnoreSms(message) }
+                ) {
+                    Text("Ignore")
+                }
             }
         }
     }

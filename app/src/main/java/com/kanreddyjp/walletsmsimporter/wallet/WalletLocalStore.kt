@@ -1,8 +1,10 @@
+
 package com.kanreddyjp.walletsmsimporter.wallet
 
 import android.content.Context
 import org.json.JSONArray
 import org.json.JSONObject
+import java.util.Locale
 
 class WalletLocalStore(context: Context) {
 
@@ -10,6 +12,8 @@ class WalletLocalStore(context: Context) {
         PREFS_NAME,
         Context.MODE_PRIVATE
     )
+
+    // Wallet accounts
 
     fun saveAccounts(accounts: List<WalletAccount>) {
         val array = JSONArray()
@@ -58,6 +62,8 @@ class WalletLocalStore(context: Context) {
             }
         }
     }
+
+    // Wallet categories
 
     fun saveCategories(categories: List<WalletCategory>) {
         val array = JSONArray()
@@ -112,6 +118,8 @@ class WalletLocalStore(context: Context) {
         }
     }
 
+    // Wallet cache metadata
+
     fun saveLastSync(timestamp: Long) {
         preferences.edit()
             .putLong(KEY_LAST_SYNC, timestamp)
@@ -130,6 +138,146 @@ class WalletLocalStore(context: Context) {
         return preferences.contains(KEY_ACCOUNTS) &&
             preferences.contains(KEY_CATEGORIES)
     }
+
+    // SMS processing state
+
+    fun markSmsProcessed(smsId: Long, timestamp: Long) {
+        require(smsId > 0L) { "SMS ID must be positive" }
+        require(timestamp > 0L) { "SMS timestamp must be positive" }
+
+        val processed = getLongSet(KEY_PROCESSED_SMS_IDS).toMutableSet()
+        processed.add(smsId)
+
+        val ignored = getLongSet(KEY_IGNORED_SMS_IDS).toMutableSet()
+        ignored.remove(smsId)
+
+        preferences.edit()
+            .putString(KEY_PROCESSED_SMS_IDS, JSONArray(processed.toList()).toString())
+            .putString(KEY_IGNORED_SMS_IDS, JSONArray(ignored.toList()).toString())
+            .putLong(
+                KEY_LAST_PROCESSED_SMS_TIMESTAMP,
+                maxOf(getLastProcessedSmsTimestamp() ?: 0L, timestamp)
+            )
+            .apply()
+    }
+
+    fun markSmsIgnored(smsId: Long, timestamp: Long) {
+        require(smsId > 0L) { "SMS ID must be positive" }
+        require(timestamp > 0L) { "SMS timestamp must be positive" }
+
+        val ignored = getLongSet(KEY_IGNORED_SMS_IDS).toMutableSet()
+        ignored.add(smsId)
+
+        val processed = getLongSet(KEY_PROCESSED_SMS_IDS).toMutableSet()
+        processed.remove(smsId)
+
+        preferences.edit()
+            .putString(KEY_IGNORED_SMS_IDS, JSONArray(ignored.toList()).toString())
+            .putString(KEY_PROCESSED_SMS_IDS, JSONArray(processed.toList()).toString())
+            .putLong(
+                KEY_LAST_PROCESSED_SMS_TIMESTAMP,
+                maxOf(getLastProcessedSmsTimestamp() ?: 0L, timestamp)
+            )
+            .apply()
+    }
+
+    fun isSmsProcessed(smsId: Long): Boolean {
+        return smsId in getLongSet(KEY_PROCESSED_SMS_IDS)
+    }
+
+    fun isSmsIgnored(smsId: Long): Boolean {
+        return smsId in getLongSet(KEY_IGNORED_SMS_IDS)
+    }
+
+    fun isSmsHandled(smsId: Long): Boolean {
+        return isSmsProcessed(smsId) || isSmsIgnored(smsId)
+    }
+
+    fun getProcessedSmsIds(): Set<Long> {
+        return getLongSet(KEY_PROCESSED_SMS_IDS)
+    }
+
+    fun getIgnoredSmsIds(): Set<Long> {
+        return getLongSet(KEY_IGNORED_SMS_IDS)
+    }
+
+    fun getLastProcessedSmsTimestamp(): Long? {
+        if (!preferences.contains(KEY_LAST_PROCESSED_SMS_TIMESTAMP)) {
+            return null
+        }
+
+        return preferences.getLong(KEY_LAST_PROCESSED_SMS_TIMESTAMP, 0L)
+    }
+
+    private fun getLongSet(key: String): Set<Long> {
+        val json = preferences.getString(key, null)
+            ?: return emptySet()
+
+        val array = JSONArray(json)
+
+        return buildSet {
+            for (index in 0 until array.length()) {
+                val value = array.optLong(index, -1L)
+                if (value > 0L) {
+                    add(value)
+                }
+            }
+        }
+    }
+
+    // Saved SMS sender headers
+
+    fun getSavedSenderHeaders(): List<String> {
+        val json = preferences.getString(KEY_SENDER_HEADERS, null)
+            ?: return emptyList()
+
+        val array = JSONArray(json)
+
+        return buildList {
+            for (index in 0 until array.length()) {
+                val header = array.optString(index, "")
+                    .trim()
+
+                if (header.isNotEmpty()) {
+                    add(header)
+                }
+            }
+        }
+    }
+
+    fun addSenderHeader(sender: String): Boolean {
+        val header = sender.trim()
+            .uppercase(Locale.ROOT)
+
+        if (header.isBlank()) {
+            return false
+        }
+
+        val headers = getSavedSenderHeaders().toMutableList()
+
+        if (headers.any { it.equals(header, ignoreCase = true) }) {
+            return false
+        }
+
+        headers.add(header)
+
+        preferences.edit()
+            .putString(KEY_SENDER_HEADERS, JSONArray(headers).toString())
+            .apply()
+
+        return true
+    }
+
+    fun removeSenderHeader(sender: String) {
+        val headers = getSavedSenderHeaders()
+            .filterNot { it.equals(sender.trim(), ignoreCase = true) }
+
+        preferences.edit()
+            .putString(KEY_SENDER_HEADERS, JSONArray(headers).toString())
+            .apply()
+    }
+
+    // Clear Wallet cache only. Preserve SMS history and saved headers.
 
     fun clear() {
         preferences.edit()
@@ -151,5 +299,17 @@ class WalletLocalStore(context: Context) {
 
         private const val KEY_LAST_SYNC =
             "last_sync"
+
+        private const val KEY_PROCESSED_SMS_IDS =
+            "processed_sms_ids"
+
+        private const val KEY_IGNORED_SMS_IDS =
+            "ignored_sms_ids"
+
+        private const val KEY_LAST_PROCESSED_SMS_TIMESTAMP =
+            "last_processed_sms_timestamp"
+
+        private const val KEY_SENDER_HEADERS =
+            "saved_sender_headers"
     }
 }

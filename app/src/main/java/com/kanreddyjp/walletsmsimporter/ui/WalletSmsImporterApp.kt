@@ -31,8 +31,12 @@ fun WalletSmsImporterApp(
     accounts: List<WalletAccount>,
     categories: List<WalletCategory>,
     submissionState: WalletRecordSubmissionState,
-    onSubmitTransaction: (TransactionDraft) -> Unit,
-    onResetSubmission: () -> Unit
+    onSubmitTransaction: (SmsMessage, TransactionDraft, Boolean) -> Unit,
+    onResetSubmission: () -> Unit,
+    onIgnoreSms: (SmsMessage) -> Unit,
+    onRefreshSms: () -> Unit,
+    savedSenderHeaders: List<String>,
+    onRemoveSenderHeader: (String) -> Unit
 ) {
     var selectedSms by remember {
         mutableStateOf<SmsMessage?>(null)
@@ -44,6 +48,14 @@ fun WalletSmsImporterApp(
 
     var isReviewing by remember {
         mutableStateOf(false)
+    }
+
+    fun returnToSmsList() {
+        selectedSms = null
+        currentDraft = null
+        isReviewing = false
+        onResetSubmission()
+        onRefreshSms()
     }
 
     MaterialTheme {
@@ -63,25 +75,51 @@ fun WalletSmsImporterApp(
                             selectedSms = message
                             currentDraft = null
                             isReviewing = false
-                        }
+                        },
+                        onIgnoreSms = onIgnoreSms
                     )
                 }
 
                 isReviewing && currentDraft != null -> {
                     TransactionReviewScreen(
+                        sms = sms,
                         draft = currentDraft!!,
                         submissionState = submissionState,
+                        savedSenderHeaders = savedSenderHeaders,
+                        onRemoveSenderHeader = onRemoveSenderHeader,
                         onEdit = {
-                            isReviewing = false
+                            if (submissionState is WalletRecordSubmissionState.Idle) {
+                                isReviewing = false
+                            }
                         },
-                        onSubmit = {
-                            currentDraft?.let(onSubmitTransaction)
+                        onSubmit = { rememberSenderHeader ->
+                            if (submissionState is WalletRecordSubmissionState.Idle) {
+                                currentDraft?.let { draft ->
+                                    onSubmitTransaction(
+                                        sms,
+                                        draft,
+                                        rememberSenderHeader
+                                    )
+                                }
+                            }
+                        },
+                        onBackToSmsList = {
+                            when (submissionState) {
+                                WalletRecordSubmissionState.Idle,
+                                is WalletRecordSubmissionState.Unconfirmed -> {
+                                    returnToSmsList()
+                                }
+
+                                WalletRecordSubmissionState.Submitting,
+                                is WalletRecordSubmissionState.Success -> Unit
+                            }
                         },
                         onDone = {
-                            selectedSms = null
-                            currentDraft = null
-                            isReviewing = false
-                            onResetSubmission()
+                            if (
+                                submissionState !is WalletRecordSubmissionState.Submitting
+                            ) {
+                                returnToSmsList()
+                            }
                         }
                     )
                 }
@@ -92,20 +130,24 @@ fun WalletSmsImporterApp(
                         accounts = accounts,
                         categories = categories,
                         initialDraft = currentDraft,
+                        onBackToSmsList = {
+                            returnToSmsList()
+                        },
                         onReview = {
                             account,
                             amount,
                             category,
                             counterParty,
                             note,
-                            type ->
+                            type,
+                            recordDate  ->
                             currentDraft = TransactionDraft(
                                 accountId = account.id,
                                 accountName = account.name,
                                 amount = amount,
                                 categoryId = category?.id,
                                 categoryName = category?.name,
-                                recordDate = sms.timestamp,
+                                recordDate = recordDate,
                                 counterParty = counterParty,
                                 note = note,
                                 type = type

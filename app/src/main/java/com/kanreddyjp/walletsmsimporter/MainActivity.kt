@@ -38,6 +38,8 @@ class MainActivity : ComponentActivity() {
         WalletRecordSubmissionState.Idle
     )
 
+    private var savedSenderHeaders by mutableStateOf<List<String>>(emptyList())
+
     private lateinit var walletTokenStore: WalletTokenStore
     private lateinit var walletLocalStore: WalletLocalStore
     private lateinit var walletRepository: WalletRepository
@@ -63,6 +65,8 @@ class MainActivity : ComponentActivity() {
             tokenStore = walletTokenStore,
             localStore = walletLocalStore
         )
+
+        savedSenderHeaders = walletRepository.getSavedSenderHeaders()
 
         if (
             walletTokenStore.hasToken() &&
@@ -91,7 +95,11 @@ class MainActivity : ComponentActivity() {
                 onSubmitTransaction = ::submitTransaction,
                 onResetSubmission = {
                     submissionState = WalletRecordSubmissionState.Idle
-                }
+                },
+                onIgnoreSms = ::ignoreSms,
+                onRefreshSms = ::refreshPendingSms,
+                savedSenderHeaders = savedSenderHeaders,
+                onRemoveSenderHeader = ::removeSenderHeader
             )
         }
     }
@@ -116,10 +124,94 @@ class MainActivity : ComponentActivity() {
     private fun scanSms() {
         scanStatus = "Scanning..."
 
-        val messages = SmsReader(this).readInbox()
+        lifecycleScope.launch {
+            try {
+                val pending = withContext(Dispatchers.IO) {
+                    walletRepository.getPendingSms(
+                        SmsReader(this@MainActivity).readInbox()
+                    )
+                }
 
-        smsMessages = messages
-        scanStatus = "Scan complete — ${messages.size} messages"
+                smsMessages = pending
+                scanStatus = "Scan complete — ${pending.size} pending messages"
+            } catch (exception: Exception) {
+                scanStatus = "Unable to scan SMS: ${
+                    exception.message ?: "Unknown error"
+                }"
+            }
+        }
+    }
+
+    private fun refreshPendingSms() {
+        if (
+            ContextCompat.checkSelfPermission(
+                this,
+                Manifest.permission.READ_SMS
+            ) == PackageManager.PERMISSION_GRANTED
+        ) {
+            scanSms()
+        }
+    }
+
+    private fun ignoreSms(message: SmsMessage) {
+        walletRepository.markSmsIgnored(
+            smsId = message.id,
+            timestamp = message.timestamp
+        )
+
+        smsMessages = smsMessages.filterNot { it.id == message.id }
+        scanStatus = "${smsMessages.size} pending messages"
+    }
+
+    private fun submitTransaction(
+        message: SmsMessage,
+        draft: TransactionDraft,
+        rememberSenderHeader: Boolean
+    ) {
+        if (submissionState !is WalletRecordSubmissionState.Idle) {
+            return
+        }
+
+        submissionState = WalletRecordSubmissionState.Submitting
+
+        lifecycleScope.launch {
+            try {
+                val result = withContext(Dispatchers.IO) {
+                    val creationResult = walletRepository.createRecord(draft)
+
+                    // Only mark the SMS handled after Wallet confirms creation.
+                    walletRepository.markSmsProcessed(
+                        smsId = message.id,
+                        timestamp = message.timestamp
+                    )
+
+                    if (rememberSenderHeader) {
+                        message.sender
+                            ?.trim()
+                            ?.takeIf { it.isNotEmpty() }
+                            ?.let(walletRepository::addSenderHeader)
+                    }
+
+                    creationResult
+                }
+
+                savedSenderHeaders = walletRepository.getSavedSenderHeaders()
+                submissionState =
+                    WalletRecordSubmissionState.Success(result.message)
+            } catch (exception: Exception) {
+                submissionState =
+                    WalletRecordSubmissionState.Unconfirmed(
+                        "Wallet did not confirm successful creation. " +
+                            "Check your Wallet records before trying again. " +
+                            "Details: ${exception.message ?: "No additional details"}"
+                    )
+            }
+        }
+    }
+
+    private fun removeSenderHeader(sender: String) {
+        walletRepository.removeSenderHeader(sender)
+        savedSenderHeaders = walletRepository.getSavedSenderHeaders()
     }
 
     private fun connectWallet(token: String) {
@@ -144,34 +236,6 @@ class MainActivity : ComponentActivity() {
                 walletConnectionState =
                     WalletConnectionState.Error(
                         exception.message ?: "Unable to connect to Wallet"
-                    )
-            }
-        }
-    }
-
-    private fun submitTransaction(draft: TransactionDraft) {
-        if (
-            submissionState !is WalletRecordSubmissionState.Idle
-        ) {
-            return
-        }
-
-        submissionState = WalletRecordSubmissionState.Submitting
-
-        lifecycleScope.launch {
-            try {
-                val result = withContext(Dispatchers.IO) {
-                    walletRepository.createRecord(draft)
-                }
-
-                submissionState =
-                    WalletRecordSubmissionState.Success(result.message)
-            } catch (exception: Exception) {
-                submissionState =
-                    WalletRecordSubmissionState.Unconfirmed(
-                        "Wallet did not confirm successful creation. " +
-                            "Check your Wallet records before trying again. " +
-                            "Details: ${exception.message ?: "No additional details"}"
                     )
             }
         }

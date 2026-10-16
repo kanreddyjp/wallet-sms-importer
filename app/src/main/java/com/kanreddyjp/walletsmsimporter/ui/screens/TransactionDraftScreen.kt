@@ -15,6 +15,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Text
@@ -27,6 +28,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.kanreddyjp.walletsmsimporter.sms.SmsMessage
+import com.kanreddyjp.walletsmsimporter.sms.SmsTransactionParser
 import com.kanreddyjp.walletsmsimporter.transaction.TransactionDraft
 import com.kanreddyjp.walletsmsimporter.transaction.TransactionType
 import com.kanreddyjp.walletsmsimporter.wallet.WalletAccount
@@ -42,15 +44,21 @@ fun TransactionDraftScreen(
     accounts: List<WalletAccount>,
     categories: List<WalletCategory>,
     initialDraft: TransactionDraft? = null,
+    onBackToSmsList: () -> Unit,
     onReview: (
         account: WalletAccount,
         amount: Double,
         category: WalletCategory?,
         counterParty: String,
         note: String,
-        type: TransactionType
+        type: TransactionType,
+        recordDate: Long
     ) -> Unit
 ) {
+    val parsedSms = remember(sms.id, sms.body, sms.timestamp) {
+        SmsTransactionParser.parse(sms)
+    }
+
     var selectedAccount by remember(sms, initialDraft, accounts) {
         mutableStateOf(
             accounts.firstOrNull { it.id == initialDraft?.accountId }
@@ -65,19 +73,31 @@ fun TransactionDraftScreen(
     }
 
     var amount by remember(sms, initialDraft) {
-        mutableStateOf(initialDraft?.amount?.toString() ?: "")
+        mutableStateOf(
+            initialDraft?.amount?.toString()
+                ?: parsedSms.amount?.toString()
+                ?: ""
+        )
     }
 
     var counterParty by remember(sms, initialDraft) {
-        mutableStateOf(initialDraft?.counterParty ?: "")
+        mutableStateOf(
+            initialDraft?.counterParty
+                ?: parsedSms.counterParty
+        )
     }
 
     var note by remember(sms, initialDraft) {
-        mutableStateOf(initialDraft?.note ?: "")
+        mutableStateOf(
+            initialDraft?.note
+                ?: parsedSms.note
+        )
     }
 
     var transactionType by remember(sms, initialDraft) {
-        mutableStateOf(initialDraft?.type ?: TransactionType.EXPENSE)
+        mutableStateOf(
+            initialDraft?.type ?: parsedSms.type
+        )
     }
 
     var accountMenuExpanded by remember { mutableStateOf(false) }
@@ -106,8 +126,18 @@ fun TransactionDraftScreen(
         )
 
         Text(
-            text = formatDate(sms.timestamp),
+            text = "SMS received: ${formatDate(sms.timestamp)}",
             style = MaterialTheme.typography.bodySmall
+        )
+
+        Text(
+            text = "Detected transaction date: ${formatDate(parsedSms.recordDate)}",
+            style = MaterialTheme.typography.bodySmall
+        )
+
+        Text(
+            text = "Detected fields are prefilled where possible. Please verify them before reviewing.",
+            style = MaterialTheme.typography.bodyMedium
         )
 
         Text(
@@ -259,6 +289,13 @@ fun TransactionDraftScreen(
             modifier = Modifier.fillMaxWidth()
         )
 
+        OutlinedButton(
+            onClick = onBackToSmsList,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text("Back to SMS list")
+        }
+
         Button(
             onClick = {
                 val account = selectedAccount ?: return@Button
@@ -271,7 +308,8 @@ fun TransactionDraftScreen(
                     selectedCategory,
                     counterParty,
                     note,
-                    transactionType
+                    transactionType,
+                    parsedSms.recordDate
                 )
             },
             enabled = selectedAccount != null &&
