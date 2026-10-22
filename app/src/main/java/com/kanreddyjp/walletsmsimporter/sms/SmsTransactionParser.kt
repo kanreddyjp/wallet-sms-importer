@@ -11,6 +11,7 @@ import java.util.Locale
 data class ParsedSmsTransaction(
     val amount: Double?,
     val type: TransactionType,
+    val accountSuffix: String?,
     val recordDate: Long,
     val counterParty: String,
     val note: String
@@ -53,10 +54,25 @@ object SmsTransactionParser {
         return ParsedSmsTransaction(
             amount = extractAmount(body),
             type = extractType(body),
+            accountSuffix = extractAccountSuffix(body),
             recordDate = extractRecordDate(body, message.timestamp),
             counterParty = extractCounterParty(body),
             note = extractNote(body)
         )
+    }
+
+    private fun extractAccountSuffix(body: String): String? {
+        // Match four digits only when the SMS explicitly identifies an account/card number.
+        val patterns = listOf(
+            Regex("""\\b(?:a/c|account|acct|card)(?:\\s*(?:number|no\\.?|ending|ending\\s+in))?\\s*[:#-]?\\s*(?:x{2,}|\\*{2,}|[xX*]+)?\\s*(\\d{4})\\b""", RegexOption.IGNORE_CASE),
+            Regex("""\\b(?:ending|ends)\\s+(?:in\\s+)?(\\d{4})\\b""", RegexOption.IGNORE_CASE)
+        )
+
+        for (pattern in patterns) {
+            val match = pattern.find(body) ?: continue
+            return match.groupValues[1]
+        }
+        return null
     }
 
     private fun extractAmount(body: String): Double? {
