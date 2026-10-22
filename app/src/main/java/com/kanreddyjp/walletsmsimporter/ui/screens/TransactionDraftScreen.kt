@@ -62,6 +62,15 @@ fun TransactionDraftScreen(
     var selectedAccount by remember(sms, initialDraft, accounts) {
         mutableStateOf(
             accounts.firstOrNull { it.id == initialDraft?.accountId }
+                ?: parsedSms.accountSuffix?.let { suffix ->
+                    val matches = accounts.filter { account ->
+                        account.bankAccountNumber
+                            .orEmpty()
+                            .filter(Char::isDigit)
+                            .takeLast(4) == suffix
+                    }
+                    matches.singleOrNull()
+                }
                 ?: accounts.firstOrNull()
         )
     }
