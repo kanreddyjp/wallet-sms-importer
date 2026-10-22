@@ -62,15 +62,24 @@ object SmsTransactionParser {
     }
 
     private fun extractAccountSuffix(body: String): String? {
-        // Match four digits only when the SMS explicitly identifies an account/card number.
-        val patterns = listOf(
-            Regex("""\b(?:a/c|account|acct|card)(?:\s*(?:number|no\.?|ending|ending\s+in))?\s*[:#-]?\s*(?:x{2,}|\*{2,}|[xX*]+)?\s*(\d{4})\b""", RegexOption.IGNORE_CASE),
-            Regex("""\b(?:ending|ends)\s+(?:in\s+)?(\d{4})\b""", RegexOption.IGNORE_CASE)
+        // Prefer four digits. Only fall back to three digits when no
+        // explicitly identified four-digit account/card suffix is present.
+        val patternsByPriority = listOf(
+            listOf(
+                Regex("""\b(?:a/c|account|acct|card)(?:\s*(?:number|no\.?|ending|ending\s+in))?\s*[:#-]?\s*(?:x{2,}|\*{2,}|[xX*]+)?\s*(\d{4})\b""", RegexOption.IGNORE_CASE),
+                Regex("""\b(?:ending|ends)\s+(?:in\s+)?(\d{4})\b""", RegexOption.IGNORE_CASE)
+            ),
+            listOf(
+                Regex("""\b(?:a/c|account|acct|card)(?:\s*(?:number|no\.?|ending|ending\s+in))?\s*[:#-]?\s*(?:x{2,}|\*{2,}|[xX*]+)?\s*(\d{3})\b""", RegexOption.IGNORE_CASE),
+                Regex("""\b(?:ending|ends)\s+(?:in\s+)?(\d{3})\b""", RegexOption.IGNORE_CASE)
+            )
         )
 
-        for (pattern in patterns) {
-            val match = pattern.find(body) ?: continue
-            return match.groupValues[1]
+        for (patterns in patternsByPriority) {
+            for (pattern in patterns) {
+                val match = pattern.find(body) ?: continue
+                return match.groupValues[1]
+            }
         }
         return null
     }
