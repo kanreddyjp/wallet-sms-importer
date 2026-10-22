@@ -33,6 +33,7 @@ class WalletApiClient(
             WalletAccount(
                 id = account.getString("id"),
                 name = account.getString("name"),
+                bankAccountNumber = account.optString("bankAccountNumber").takeUnless { it == "null" },
                 accountType = account.getString("accountType"),
                 currencyCode = account.getString("currencyCode"),
                 archived = account.getBoolean("archived"),
