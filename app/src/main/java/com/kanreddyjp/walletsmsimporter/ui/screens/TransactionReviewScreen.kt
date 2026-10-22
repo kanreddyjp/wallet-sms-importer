@@ -124,42 +124,6 @@ fun TransactionReviewScreen(
             }
         }
 
-        Column(
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            Text(
-                text = "Saved bank SMS headers",
-                style = MaterialTheme.typography.titleMedium
-            )
-
-            if (savedSenderHeaders.isEmpty()) {
-                Text(
-                    text = "No headers saved yet.",
-                    style = MaterialTheme.typography.bodyMedium
-                )
-            } else {
-                savedSenderHeaders.forEach { header ->
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = header,
-                            modifier = Modifier.weight(1f),
-                            style = MaterialTheme.typography.bodyLarge
-                        )
-
-                        TextButton(
-                            onClick = { onRemoveSenderHeader(header) },
-                            enabled = !submissionAttempted
-                        ) {
-                            Text("Delete")
-                        }
-                    }
-                }
-            }
-        }
-
         when (val state = submissionState) {
             WalletRecordSubmissionState.Idle -> Unit
 
@@ -215,6 +179,42 @@ fun TransactionReviewScreen(
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Text("Done")
+            }
+        }
+        
+        Column(
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Text(
+                text = "Saved bank SMS headers",
+                style = MaterialTheme.typography.titleMedium
+            )
+
+            if (savedSenderHeaders.isEmpty()) {
+                Text(
+                    text = "No headers saved yet.",
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            } else {
+                savedSenderHeaders.forEach { header ->
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = header,
+                            modifier = Modifier.weight(1f),
+                            style = MaterialTheme.typography.bodyLarge
+                        )
+
+                        TextButton(
+                            onClick = { onRemoveSenderHeader(header) },
+                            enabled = !submissionAttempted
+                        ) {
+                            Text("Delete")
+                        }
+                    }
+                }
             }
         }
     }
