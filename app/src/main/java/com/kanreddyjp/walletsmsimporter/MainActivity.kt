@@ -39,6 +39,7 @@ class MainActivity : ComponentActivity() {
     )
 
     private var savedSenderHeaders by mutableStateOf<List<String>>(emptyList())
+    private var isRefreshingWalletAccounts by mutableStateOf(false)
 
     private lateinit var walletTokenStore: WalletTokenStore
     private lateinit var walletLocalStore: WalletLocalStore
@@ -89,6 +90,8 @@ class MainActivity : ComponentActivity() {
                 onScanSms = ::requestSmsPermission,
                 walletConnectionState = walletConnectionState,
                 onConnectWallet = ::connectWallet,
+                onRefreshWalletAccounts = ::refreshWalletAccounts,
+                isRefreshingWalletAccounts = isRefreshingWalletAccounts,
                 accounts = walletRepository.getCachedAccounts(),
                 categories = walletRepository.getCachedCategories(),
                 submissionState = submissionState,
@@ -212,6 +215,33 @@ class MainActivity : ComponentActivity() {
     private fun removeSenderHeader(sender: String) {
         walletRepository.removeSenderHeader(sender)
         savedSenderHeaders = walletRepository.getSavedSenderHeaders()
+    }
+
+    private fun refreshWalletAccounts() {
+        if (isRefreshingWalletAccounts) return
+        if (!walletTokenStore.hasToken()) {
+            walletConnectionState = WalletConnectionState.Disconnected
+            return
+        }
+
+        isRefreshingWalletAccounts = true
+        lifecycleScope.launch {
+            try {
+                val result = withContext(Dispatchers.IO) {
+                    walletRepository.sync()
+                }
+                walletConnectionState = WalletConnectionState.Connected(
+                    accountCount = result.accountCount,
+                    categoryCount = result.categoryCount
+                )
+            } catch (exception: Exception) {
+                walletConnectionState = WalletConnectionState.Error(
+                    exception.message ?: "Unable to refresh Wallet accounts"
+                )
+            } finally {
+                isRefreshingWalletAccounts = false
+            }
+        }
     }
 
     private fun connectWallet(token: String) {
