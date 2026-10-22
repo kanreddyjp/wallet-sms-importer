@@ -102,6 +102,8 @@ fun TransactionDraftScreen(
 
     var accountMenuExpanded by remember { mutableStateOf(false) }
     var categoryMenuExpanded by remember { mutableStateOf(false) }
+    var accountSearchQuery by remember(sms.id) { mutableStateOf("") }
+    var categorySearchQuery by remember(sms.id) { mutableStateOf("") }
 
     Column(
         modifier = Modifier
@@ -186,14 +188,18 @@ fun TransactionDraftScreen(
 
         ExposedDropdownMenuBox(
             expanded = accountMenuExpanded,
-            onExpandedChange = {
-                accountMenuExpanded = !accountMenuExpanded
+            onExpandedChange = { expanded ->
+                accountMenuExpanded = expanded
+                if (expanded) accountSearchQuery = ""
             }
         ) {
             OutlinedTextField(
-                value = selectedAccount?.name ?: "",
-                onValueChange = {},
-                readOnly = true,
+                value = if (accountMenuExpanded) accountSearchQuery else selectedAccount?.name ?: "",
+                onValueChange = {
+                    accountSearchQuery = it
+                    accountMenuExpanded = true
+                },
+                readOnly = false,
                 label = { Text("Account") },
                 trailingIcon = {
                     ExposedDropdownMenuDefaults.TrailingIcon(
@@ -209,11 +215,15 @@ fun TransactionDraftScreen(
                 expanded = accountMenuExpanded,
                 onDismissRequest = { accountMenuExpanded = false }
             ) {
-                accounts.forEach { account ->
+                val filteredAccounts = accounts.filter {
+                    it.name.contains(accountSearchQuery, ignoreCase = true)
+                }
+                filteredAccounts.forEach { account ->
                     DropdownMenuItem(
                         text = { Text(account.name) },
                         onClick = {
                             selectedAccount = account
+                            accountSearchQuery = ""
                             accountMenuExpanded = false
                         }
                     )
@@ -231,14 +241,18 @@ fun TransactionDraftScreen(
 
         ExposedDropdownMenuBox(
             expanded = categoryMenuExpanded,
-            onExpandedChange = {
-                categoryMenuExpanded = !categoryMenuExpanded
+            onExpandedChange = { expanded ->
+                categoryMenuExpanded = expanded
+                if (expanded) categorySearchQuery = ""
             }
         ) {
             OutlinedTextField(
-                value = selectedCategory?.name ?: "",
-                onValueChange = {},
-                readOnly = true,
+                value = if (categoryMenuExpanded) categorySearchQuery else selectedCategory?.name ?: "",
+                onValueChange = {
+                    categorySearchQuery = it
+                    categoryMenuExpanded = true
+                },
+                readOnly = false,
                 label = { Text("Category") },
                 trailingIcon = {
                     ExposedDropdownMenuDefaults.TrailingIcon(
@@ -254,7 +268,11 @@ fun TransactionDraftScreen(
                 expanded = categoryMenuExpanded,
                 onDismissRequest = { categoryMenuExpanded = false }
             ) {
-                categories.forEach { category ->
+                val filteredCategories = categories.filter { category ->
+                    category.name.contains(categorySearchQuery, ignoreCase = true) ||
+                        category.groupName.orEmpty().contains(categorySearchQuery, ignoreCase = true)
+                }
+                filteredCategories.forEach { category ->
                     DropdownMenuItem(
                         text = {
                             Text(
@@ -267,6 +285,7 @@ fun TransactionDraftScreen(
                         },
                         onClick = {
                             selectedCategory = category
+                            categorySearchQuery = ""
                             categoryMenuExpanded = false
                         }
                     )
