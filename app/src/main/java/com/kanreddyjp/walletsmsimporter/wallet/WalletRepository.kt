@@ -12,7 +12,8 @@ class WalletRepository(
     // Cached Wallet data
 
     fun getCachedAccounts(): List<WalletAccount> {
-        return localStore.getAccounts()
+    return localStore.getAccounts()
+        .filterNot { it.archived }
     }
 
     fun getCachedCategories(): List<WalletCategory> {
@@ -45,7 +46,7 @@ class WalletRepository(
         localStore.saveLastSync(syncTime)
 
         return SyncResult(
-            accountCount = accounts.size,
+            accountCount = accounts.count { !it.archived },
             categoryCount = categories.size,
             timestamp = syncTime
         )
