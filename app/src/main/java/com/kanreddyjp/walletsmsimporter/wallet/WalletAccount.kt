@@ -3,6 +3,7 @@ package com.kanreddyjp.walletsmsimporter.wallet
 data class WalletAccount(
     val id: String,
     val name: String,
+    val bankAccountNumber: String,
     val accountType: String,
     val currencyCode: String,
     val archived: Boolean,
