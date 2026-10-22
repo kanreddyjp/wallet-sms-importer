@@ -71,6 +71,8 @@ class WalletApiClient(
             TransactionType.INCOME -> draft.amount
         }
 
+        val formattedRecordDate = formatRecordDate(draft.recordDate)
+
         val record = JSONObject().apply {
             put("accountId", draft.accountId)
             put("amount", JSONObject().put("value", signedAmount))
@@ -87,7 +89,8 @@ class WalletApiClient(
                 put("note", draft.note.trim())
             }
 
-            put("recordDate", formatRecordDate(draft.recordDate))
+            val formattedRecordDate = formatRecordDate(draft.recordDate)
+            put("recordDate", formattedRecordDate)
         }
 
         val requestBody = JSONArray()
@@ -106,11 +109,21 @@ class WalletApiClient(
 
         client.newCall(request).execute().use { response ->
             if (!response.isSuccessful) {
-                throw IllegalStateException(
-                    "Wallet API returned HTTP ${response.code}"
-                )
-            }
+                val errorBody = response.body
+                    ?.string()
+                    ?.take(2000)
+                    ?.takeIf { it.isNotBlank() }
 
+                val message = buildString {
+                    append("Wallet API returned HTTP ${response.code}; recordDate=$formattedRecordDate")
+                    if (errorBody != null) {
+                        append(": ")
+                        append(errorBody)
+                    }
+                }
+
+                throw IllegalStateException(message)
+            }
             val body = response.body?.string()
                 ?: throw IllegalStateException(
                     "Wallet API returned an empty response"

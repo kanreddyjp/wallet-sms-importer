@@ -107,6 +107,7 @@ object SmsTransactionParser {
         }
     }
 
+    
     private fun extractRecordDate(
         body: String,
         smsTimestamp: Long
@@ -114,86 +115,87 @@ object SmsTransactionParser {
         val dateMatch = dateRegex.find(body) ?: return smsTimestamp
         val dateText = dateMatch.groupValues[1]
 
-        val datePatterns = listOf(
-            "dd/MM/yyyy",
-            "d/M/yyyy",
-            "dd-MM-yyyy",
-            "d-M-yyyy",
-            "dd/MM/yy",
-            "d/M/yy",
-            "dd-MM-yy",
-            "d-M-yy",
-            "dd MMM yyyy",
-            "d MMM yyyy",
-            "dd MMMM yyyy",
-            "d MMMM yyyy",
-            "dd MMM yy",
-            "d MMM yy"
-        )
+        val dateParts = Regex(
+            """^(\d{1,2})[/-](\d{1,2})[/-](\d{2,4})$"""
+        ).matchEntire(dateText)
 
-        var parsedDate: Date? = null
-
-        for (pattern in datePatterns) {
-            val formatter = SimpleDateFormat(pattern, Locale.ENGLISH).apply {
-                isLenient = false
-            }
-
-            val position = ParsePosition(0)
-            val candidate = formatter.parse(dateText, position)
-
-            if (candidate != null && position.index == dateText.length) {
-                parsedDate = candidate
-                break
-            }
-        }
-
-        val date = parsedDate ?: return smsTimestamp
         val calendar = Calendar.getInstance().apply {
-            time = date
+            clear()
+            timeZone = java.util.TimeZone.getDefault()
         }
 
-        val timeMatch = timeRegex.find(
-            body.substring(dateMatch.range.last + 1)
-        )
+        if (dateParts != null) {
+            val day = dateParts.groupValues[1].toInt()
+            val month = dateParts.groupValues[2].toInt()
+            val yearText = dateParts.groupValues[3]
+            val year = if (yearText.length == 2) {
+                2000 + yearText.toInt()
+            } else {
+                yearText.toInt()
+            }
 
-        if (timeMatch != null) {
-            val timeText = timeMatch.groupValues[1]
-                .trim()
-                .uppercase(Locale.ROOT)
+            if (month !in 1..12 || day !in 1..31) return smsTimestamp
 
-            val timePatterns = listOf(
-                "h:mm:ss a",
-                "h:mm a",
-                "HH:mm:ss",
-                "HH:mm"
+            calendar.set(year, month - 1, day, 12, 0, 0)
+            calendar.set(Calendar.MILLISECOND, 0)
+
+            // Reject impossible dates such as 31 February.
+            if (
+                calendar.get(Calendar.YEAR) != year ||
+                calendar.get(Calendar.MONTH) != month - 1 ||
+                calendar.get(Calendar.DAY_OF_MONTH) != day
+            ) {
+                return smsTimestamp
+            }
+        } else {
+            val patterns = listOf(
+                "d MMM yyyy",
+                "dd MMM yyyy",
+                "d MMMM yyyy",
+                "dd MMMM yyyy",
+                "d MMM yy",
+                "dd MMM yy"
             )
 
-            var parsedTime: Date? = null
+            var parsed: Date? = null
 
-            for (pattern in timePatterns) {
-                val formatter = SimpleDateFormat(pattern, Locale.ENGLISH).apply {
+            for (pattern in patterns) {
+                val normalizedText = if (pattern.endsWith("yy")) {
+                    dateText.replace(
+                        Regex("""(\d{2})$"""),
+                        "20$1"
+                    )
+                } else {
+                    dateText
+                }
+
+                val actualPattern = pattern.replace("yy", "yyyy")
+                val formatter = SimpleDateFormat(actualPattern, Locale.ENGLISH).apply {
                     isLenient = false
                 }
 
                 val position = ParsePosition(0)
-                val candidate = formatter.parse(timeText, position)
+                val candidate = formatter.parse(normalizedText, position)
 
-                if (candidate != null && position.index == timeText.length) {
-                    parsedTime = candidate
+                if (candidate != null && position.index == normalizedText.length) {
+                    parsed = candidate
                     break
                 }
             }
 
-            if (parsedTime != null) {
-                val timeCalendar = Calendar.getInstance().apply {
-                    time = parsedTime
-                }
+            if (parsed == null) return smsTimestamp
 
-                calendar.set(Calendar.HOUR_OF_DAY, timeCalendar.get(Calendar.HOUR_OF_DAY))
-                calendar.set(Calendar.MINUTE, timeCalendar.get(Calendar.MINUTE))
-                calendar.set(Calendar.SECOND, timeCalendar.get(Calendar.SECOND))
-                calendar.set(Calendar.MILLISECOND, 0)
+            val parsedCalendar = Calendar.getInstance().apply {
+                time = parsed!!
             }
+
+            calendar.set(
+                parsedCalendar.get(Calendar.YEAR),
+                parsedCalendar.get(Calendar.MONTH),
+                parsedCalendar.get(Calendar.DAY_OF_MONTH),
+                12, 0, 0
+            )
+            calendar.set(Calendar.MILLISECOND, 0)
         }
 
         return calendar.timeInMillis
