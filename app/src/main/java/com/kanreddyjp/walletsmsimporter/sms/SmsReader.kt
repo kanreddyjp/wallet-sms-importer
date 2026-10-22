@@ -22,10 +22,11 @@ class SmsReader(private val context: Context) {
                 "_id",
                 "address",
                 "body",
-                "date"
+                "date",
+                "type"
             ),
-            null,
-            null,
+            "type = ?",
+            arrayOf("1"),
             "date ASC, _id ASC"
         )
 
