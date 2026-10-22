@@ -132,15 +132,10 @@ object SmsTransactionParser {
         val dateText = dateMatch.groupValues[1]
 
         val dateParts = Regex(
-            """^(\d{1,2})[/-](\d{1,2})[/-](\d{2,4})$"""
+            """^(\\d{1,2})[/-](\\d{1,2})[/-](\\d{2,4})$"""
         ).matchEntire(dateText)
 
-        val calendar = Calendar.getInstance().apply {
-            clear()
-            timeZone = java.util.TimeZone.getDefault()
-        }
-
-        if (dateParts != null) {
+        val transactionDate = if (dateParts != null) {
             val day = dateParts.groupValues[1].toInt()
             val month = dateParts.groupValues[2].toInt()
             val yearText = dateParts.groupValues[3]
@@ -152,16 +147,20 @@ object SmsTransactionParser {
 
             if (month !in 1..12 || day !in 1..31) return smsTimestamp
 
-            calendar.set(year, month - 1, day, 12, 0, 0)
-            calendar.set(Calendar.MILLISECOND, 0)
+            Calendar.getInstance().apply {
+                timeZone = java.util.TimeZone.getDefault()
+                clear()
+                set(year, month - 1, day, 0, 0, 0)
+                set(Calendar.MILLISECOND, 0)
 
-            // Reject impossible dates such as 31 February.
-            if (
-                calendar.get(Calendar.YEAR) != year ||
-                calendar.get(Calendar.MONTH) != month - 1 ||
-                calendar.get(Calendar.DAY_OF_MONTH) != day
-            ) {
-                return smsTimestamp
+                // Reject impossible dates such as 31 February.
+                if (
+                    get(Calendar.YEAR) != year ||
+                    get(Calendar.MONTH) != month - 1 ||
+                    get(Calendar.DAY_OF_MONTH) != day
+                ) {
+                    return smsTimestamp
+                }
             }
         } else {
             val patterns = listOf(
@@ -178,7 +177,7 @@ object SmsTransactionParser {
             for (pattern in patterns) {
                 val normalizedText = if (pattern.endsWith("yy")) {
                     dateText.replace(
-                        Regex("""(\d{2})$"""),
+                        Regex("""(\\d{2})$"""),
                         "20$1"
                     )
                 } else {
@@ -188,6 +187,7 @@ object SmsTransactionParser {
                 val actualPattern = pattern.replace("yy", "yyyy")
                 val formatter = SimpleDateFormat(actualPattern, Locale.ENGLISH).apply {
                     isLenient = false
+                    timeZone = java.util.TimeZone.getDefault()
                 }
 
                 val position = ParsePosition(0)
@@ -199,22 +199,42 @@ object SmsTransactionParser {
                 }
             }
 
-            if (parsed == null) return smsTimestamp
-
-            val parsedCalendar = Calendar.getInstance().apply {
-                time = parsed!!
+            val parsedDate = parsed ?: return smsTimestamp
+            Calendar.getInstance().apply {
+                timeZone = java.util.TimeZone.getDefault()
+                time = parsedDate
+                set(Calendar.HOUR_OF_DAY, 0)
+                set(Calendar.MINUTE, 0)
+                set(Calendar.SECOND, 0)
+                set(Calendar.MILLISECOND, 0)
             }
-
-            calendar.set(
-                parsedCalendar.get(Calendar.YEAR),
-                parsedCalendar.get(Calendar.MONTH),
-                parsedCalendar.get(Calendar.DAY_OF_MONTH),
-                12, 0, 0
-            )
-            calendar.set(Calendar.MILLISECOND, 0)
         }
 
-        return calendar.timeInMillis
+        // Use the transaction date from the SMS body and the received SMS's
+        // local time, instead of assigning an arbitrary noon timestamp.
+        val receivedTime = Calendar.getInstance().apply {
+            timeZone = java.util.TimeZone.getDefault()
+            timeInMillis = smsTimestamp
+        }
+
+        transactionDate.set(
+            Calendar.HOUR_OF_DAY,
+            receivedTime.get(Calendar.HOUR_OF_DAY)
+        )
+        transactionDate.set(
+            Calendar.MINUTE,
+            receivedTime.get(Calendar.MINUTE)
+        )
+        transactionDate.set(
+            Calendar.SECOND,
+            receivedTime.get(Calendar.SECOND)
+        )
+        transactionDate.set(
+            Calendar.MILLISECOND,
+            receivedTime.get(Calendar.MILLISECOND)
+        )
+
+        return transactionDate.timeInMillis
     }
 
     private fun extractCounterParty(body: String): String {
