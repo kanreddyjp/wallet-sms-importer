@@ -41,6 +41,8 @@ fun HomeScreen(
     onScanSms: () -> Unit,
     walletConnectionState: WalletConnectionState,
     onConnectWallet: (String) -> Unit,
+    onRefreshWalletAccounts: () -> Unit,
+    isRefreshingWalletAccounts: Boolean,
     onCreateTransaction: (SmsMessage) -> Unit,
     onIgnoreSms: (SmsMessage) -> Unit
 ) {
@@ -62,7 +64,9 @@ fun HomeScreen(
                 state = walletConnectionState,
                 onConnect = {
                     showConnectDialog = true
-                }
+                },
+                onRefresh = onRefreshWalletAccounts,
+                isRefreshing = isRefreshingWalletAccounts
             )
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -127,7 +131,9 @@ fun HomeScreen(
 @Composable
 private fun WalletConnectionSection(
     state: WalletConnectionState,
-    onConnect: () -> Unit
+    onConnect: () -> Unit,
+    onRefresh: () -> Unit,
+    isRefreshing: Boolean
 ) {
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(16.dp)) {
@@ -161,6 +167,18 @@ private fun WalletConnectionSection(
                     Spacer(modifier = Modifier.height(4.dp))
                     Text("Accounts: ${state.accountCount}")
                     Text("Categories: ${state.categoryCount}")
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Button(
+                        onClick = onRefresh,
+                        enabled = !isRefreshing
+                    ) {
+                        if (isRefreshing) {
+                            CircularProgressIndicator()
+                            Text("Refreshing Wallet...")
+                        } else {
+                            Text("Refresh Wallet Accounts")
+                        }
+                    }
                 }
 
                 is WalletConnectionState.Error -> {
