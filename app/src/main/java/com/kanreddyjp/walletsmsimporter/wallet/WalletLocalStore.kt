@@ -23,6 +23,7 @@ class WalletLocalStore(context: Context) {
                 JSONObject().apply {
                     put("id", account.id)
                     put("name", account.name)
+                    put("bankAccountNumber", account.bankAccountNumber)
                     put("accountType", account.accountType)
                     put("currencyCode", account.currencyCode)
                     put("archived", account.archived)
@@ -51,6 +52,7 @@ class WalletLocalStore(context: Context) {
                     WalletAccount(
                         id = item.getString("id"),
                         name = item.getString("name"),
+                        bankAccountNumber = item.optString("bankAccountNumber").takeUnless { it == "null" },
                         accountType = item.getString("accountType"),
                         currencyCode = item.getString("currencyCode"),
                         archived = item.getBoolean("archived"),
