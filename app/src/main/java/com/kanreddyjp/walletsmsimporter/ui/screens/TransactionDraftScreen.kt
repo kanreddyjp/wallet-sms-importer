@@ -198,8 +198,8 @@ fun TransactionDraftScreen(
         ExposedDropdownMenuBox(
             expanded = accountMenuExpanded,
             onExpandedChange = { expanded ->
+                if (expanded && !accountMenuExpanded) accountSearchQuery = ""
                 accountMenuExpanded = expanded
-                if (expanded) accountSearchQuery = ""
             }
         ) {
             OutlinedTextField(
@@ -251,8 +251,8 @@ fun TransactionDraftScreen(
         ExposedDropdownMenuBox(
             expanded = categoryMenuExpanded,
             onExpandedChange = { expanded ->
+                if (expanded && !categoryMenuExpanded) categorySearchQuery = ""
                 categoryMenuExpanded = expanded
-                if (expanded) categorySearchQuery = ""
             }
         ) {
             OutlinedTextField(
