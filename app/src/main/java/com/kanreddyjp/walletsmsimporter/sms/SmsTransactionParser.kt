@@ -64,8 +64,8 @@ object SmsTransactionParser {
     private fun extractAccountSuffix(body: String): String? {
         // Match four digits only when the SMS explicitly identifies an account/card number.
         val patterns = listOf(
-            Regex("""\\b(?:a/c|account|acct|card)(?:\\s*(?:number|no\\.?|ending|ending\\s+in))?\\s*[:#-]?\\s*(?:x{2,}|\\*{2,}|[xX*]+)?\\s*(\\d{4})\\b""", RegexOption.IGNORE_CASE),
-            Regex("""\\b(?:ending|ends)\\s+(?:in\\s+)?(\\d{4})\\b""", RegexOption.IGNORE_CASE)
+            Regex("""\b(?:a/c|account|acct|card)(?:\s*(?:number|no\.?|ending|ending\s+in))?\s*[:#-]?\s*(?:x{2,}|\*{2,}|[xX*]+)?\s*(\d{4})\b""", RegexOption.IGNORE_CASE),
+            Regex("""\b(?:ending|ends)\s+(?:in\s+)?(\d{4})\b""", RegexOption.IGNORE_CASE)
         )
 
         for (pattern in patterns) {
