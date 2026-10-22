@@ -28,6 +28,8 @@ fun WalletSmsImporterApp(
     onScanSms: () -> Unit,
     walletConnectionState: WalletConnectionState,
     onConnectWallet: (String) -> Unit,
+    onRefreshWalletAccounts: () -> Unit,
+    isRefreshingWalletAccounts: Boolean,
     accounts: List<WalletAccount>,
     categories: List<WalletCategory>,
     submissionState: WalletRecordSubmissionState,
@@ -70,6 +72,8 @@ fun WalletSmsImporterApp(
                         onScanSms = onScanSms,
                         walletConnectionState = walletConnectionState,
                         onConnectWallet = onConnectWallet,
+                        onRefreshWalletAccounts = onRefreshWalletAccounts,
+                        isRefreshingWalletAccounts = isRefreshingWalletAccounts,
                         onCreateTransaction = { message ->
                             onResetSubmission()
                             selectedSms = message
