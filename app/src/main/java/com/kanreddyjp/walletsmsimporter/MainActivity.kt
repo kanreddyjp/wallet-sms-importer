@@ -235,9 +235,7 @@ class MainActivity : ComponentActivity() {
                     categoryCount = result.categoryCount
                 )
             } catch (exception: Exception) {
-                walletConnectionState = WalletConnectionState.Error(
-                    exception.message ?: "Unable to refresh Wallet accounts"
-                )
+                scanStatus = "Wallet refresh failed: ${exception.message ?: "Unknown error"}"
             } finally {
                 isRefreshingWalletAccounts = false
             }
