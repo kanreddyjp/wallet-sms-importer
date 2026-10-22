@@ -67,7 +67,7 @@ fun TransactionDraftScreen(
                         account.bankAccountNumber
                             .orEmpty()
                             .filter(Char::isDigit)
-                            .takeLast(4) == suffix
+                            .takeLast(suffix.length) == suffix
                     }
                     matches.singleOrNull()
                 }
