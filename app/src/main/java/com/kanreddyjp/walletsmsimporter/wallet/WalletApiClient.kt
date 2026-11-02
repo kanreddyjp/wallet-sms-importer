@@ -80,7 +80,7 @@ class WalletApiClient(
         val signedAmount = when (draft.type) {
             TransactionType.EXPENSE -> -draft.amount
             TransactionType.INCOME -> draft.amount
-            TransactionType.TRANSFER -> draft.amount
+            TransactionType.TRANSFER -> -draft.amount
         }
 
         val formattedRecordDate = formatRecordDate(draft.recordDate)
