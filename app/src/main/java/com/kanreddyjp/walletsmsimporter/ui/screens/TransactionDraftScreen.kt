@@ -36,6 +36,9 @@ import com.kanreddyjp.walletsmsimporter.wallet.WalletCategory
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.material3.Card
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -195,47 +198,56 @@ fun TransactionDraftScreen(
             }
         }
 
-        ExposedDropdownMenuBox(
-            expanded = accountMenuExpanded,
-            onExpandedChange = { expanded ->
-                if (expanded && !accountMenuExpanded) accountSearchQuery = ""
-                accountMenuExpanded = expanded
-            }
-        ) {
+        Column {
             OutlinedTextField(
-                value = if (accountMenuExpanded) accountSearchQuery else selectedAccount?.name ?: "",
+                value = if (accountMenuExpanded) {
+                    accountSearchQuery
+                } else {
+                    selectedAccount?.name ?: ""
+                },
                 onValueChange = {
                     accountSearchQuery = it
                     accountMenuExpanded = true
                 },
-                readOnly = false,
                 label = { Text("Account") },
-                trailingIcon = {
-                    ExposedDropdownMenuDefaults.TrailingIcon(
-                        expanded = accountMenuExpanded
-                    )
-                },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .menuAnchor()
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth()
             )
 
-            ExposedDropdownMenu(
-                expanded = accountMenuExpanded,
-                onDismissRequest = { accountMenuExpanded = false }
-            ) {
+            if (accountMenuExpanded) {
                 val filteredAccounts = accounts.filter {
                     it.name.contains(accountSearchQuery, ignoreCase = true)
                 }
-                filteredAccounts.forEach { account ->
-                    DropdownMenuItem(
-                        text = { Text(account.name) },
-                        onClick = {
-                            selectedAccount = account
-                            accountSearchQuery = ""
-                            accountMenuExpanded = false
+
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 4.dp)
+                ) {
+                    Column(
+                        modifier = Modifier.heightIn(max = 240.dp)
+                    ) {
+                        if (filteredAccounts.isEmpty()) {
+                            Text(
+                                text = "No matching accounts",
+                                modifier = Modifier.padding(16.dp)
+                            )
+                        } else {
+                            filteredAccounts.forEach { account ->
+                                Text(
+                                    text = account.name,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clickable {
+                                            selectedAccount = account
+                                            accountSearchQuery = ""
+                                            accountMenuExpanded = false
+                                        }
+                                        .padding(16.dp)
+                                )
+                            }
                         }
-                    )
+                    }
                 }
             }
         }
@@ -248,56 +260,62 @@ fun TransactionDraftScreen(
             modifier = Modifier.fillMaxWidth()
         )
 
-        ExposedDropdownMenuBox(
-            expanded = categoryMenuExpanded,
-            onExpandedChange = { expanded ->
-                if (expanded && !categoryMenuExpanded) categorySearchQuery = ""
-                categoryMenuExpanded = expanded
-            }
-        ) {
+        Column {
             OutlinedTextField(
-                value = if (categoryMenuExpanded) categorySearchQuery else selectedCategory?.name ?: "",
+                value = if (categoryMenuExpanded) {
+                    categorySearchQuery
+                } else {
+                    selectedCategory?.name ?: ""
+                },
                 onValueChange = {
                     categorySearchQuery = it
                     categoryMenuExpanded = true
                 },
-                readOnly = false,
                 label = { Text("Category") },
-                trailingIcon = {
-                    ExposedDropdownMenuDefaults.TrailingIcon(
-                        expanded = categoryMenuExpanded
-                    )
-                },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .menuAnchor()
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth()
             )
 
-            ExposedDropdownMenu(
-                expanded = categoryMenuExpanded,
-                onDismissRequest = { categoryMenuExpanded = false }
-            ) {
+            if (categoryMenuExpanded) {
                 val filteredCategories = categories.filter { category ->
                     category.name.contains(categorySearchQuery, ignoreCase = true) ||
-                        category.groupName.orEmpty().contains(categorySearchQuery, ignoreCase = true)
+                        category.groupName.orEmpty()
+                            .contains(categorySearchQuery, ignoreCase = true)
                 }
-                filteredCategories.forEach { category ->
-                    DropdownMenuItem(
-                        text = {
+
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 4.dp)
+                ) {
+                    Column(
+                        modifier = Modifier.heightIn(max = 300.dp)
+                    ) {
+                        if (filteredCategories.isEmpty()) {
                             Text(
-                                if (category.groupName != null) {
-                                    "${category.name} — ${category.groupName}"
-                                } else {
-                                    category.name
-                                }
+                                text = "No matching categories",
+                                modifier = Modifier.padding(16.dp)
                             )
-                        },
-                        onClick = {
-                            selectedCategory = category
-                            categorySearchQuery = ""
-                            categoryMenuExpanded = false
+                        } else {
+                            filteredCategories.forEach { category ->
+                                Text(
+                                    text = if (category.groupName != null) {
+                                        "${category.name} — ${category.groupName}"
+                                    } else {
+                                        category.name
+                                    },
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clickable {
+                                            selectedCategory = category
+                                            categorySearchQuery = ""
+                                            categoryMenuExpanded = false
+                                        }
+                                        .padding(16.dp)
+                                )
+                            }
                         }
-                    )
+                    }
                 }
             }
         }
