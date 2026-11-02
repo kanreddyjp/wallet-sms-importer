@@ -67,9 +67,20 @@ class WalletApiClient(
             "Amount must be greater than zero"
         }
 
+        if (draft.type == TransactionType.TRANSFER) {
+            require(!draft.toAccountId.isNullOrBlank()) {
+                "Destination account is required for a transfer"
+            }
+
+            require(draft.toAccountId != draft.accountId) {
+                "Source and destination accounts must be different"
+            }
+        }
+
         val signedAmount = when (draft.type) {
             TransactionType.EXPENSE -> -draft.amount
             TransactionType.INCOME -> draft.amount
+            TransactionType.TRANSFER -> draft.amount
         }
 
         val formattedRecordDate = formatRecordDate(draft.recordDate)
@@ -92,6 +103,15 @@ class WalletApiClient(
 
             val formattedRecordDate = formatRecordDate(draft.recordDate)
             put("recordDate", formattedRecordDate)
+            if (draft.type == TransactionType.TRANSFER) {
+                put(
+                    "transfer",
+                    JSONObject().apply {
+                        put("accountId", draft.toAccountId)
+                        put("pairingMode", "new")
+                    }
+                )
+            }
         }
 
         val requestBody = JSONArray()
