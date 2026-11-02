@@ -216,7 +216,6 @@ fun TransactionDraftScreen(
                     selected = transactionType == TransactionType.TRANSFER,
                     onClick = {
                         transactionType = TransactionType.TRANSFER
-                        selectedCategory = null
                         categoryMenuExpanded = false
                     }
                 )
@@ -238,7 +237,15 @@ fun TransactionDraftScreen(
                     accountSearchQuery = it
                     accountMenuExpanded = true
                 },
-                label = { Text("Account") },
+                label = {
+                    Text(
+                        if (transactionType == TransactionType.TRANSFER) {
+                            "From Account"
+                        } else {
+                            "Account"
+                        }
+                    )
+                },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth()
             )
