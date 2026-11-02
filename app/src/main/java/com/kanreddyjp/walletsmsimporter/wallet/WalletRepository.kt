@@ -66,15 +66,32 @@ class WalletRepository(
     // SMS processing
 
     /**
-     * Return messages that have not been imported or ignored.
-     * Older pending messages remain visible even if newer messages
-     * have already been processed.
+     * Return only bank SMS messages that:
+     * 1. Match at least one configured bank identifier.
+     * 2. Have not already been imported or ignored.
+     *
+     * Matching is case-insensitive substring matching.
+     * Example: BT-ICICIT-S matches the identifier ICICI.
      */
     fun getPendingSms(messages: List<SmsMessage>): List<SmsMessage> {
         val handledIds = localStore.getProcessedSmsIds() +
             localStore.getIgnoredSmsIds()
 
+        val bankIdentifiers = localStore.getBankSmsIdentifiers()
+            .map { it.trim().uppercase() }
+            .filter { it.isNotEmpty() }
+
         return messages
+            .filter { message ->
+                val sender = message.sender
+                    ?.trim()
+                    ?.uppercase()
+                    ?: return@filter false
+
+                bankIdentifiers.any { identifier ->
+                    sender.contains(identifier)
+                }
+            }
             .filter { it.id !in handledIds }
             .sortedWith(
                 compareBy<SmsMessage> { it.timestamp }
