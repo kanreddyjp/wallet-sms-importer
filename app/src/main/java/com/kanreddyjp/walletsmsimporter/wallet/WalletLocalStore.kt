@@ -227,6 +227,36 @@ class WalletLocalStore(context: Context) {
         }
     }
 
+    // Bank SMS identifiers
+
+    fun getBankSmsIdentifiers(): List<String> {
+        val stored = preferences.getString(KEY_BANK_SMS_IDENTIFIERS, null)
+
+        if (stored == null) {
+            return DEFAULT_BANK_SMS_IDENTIFIERS
+        }
+
+        return stored
+            .split(',')
+            .map { it.trim().uppercase(Locale.ROOT) }
+            .filter { it.isNotEmpty() }
+            .distinct()
+    }
+
+    fun saveBankSmsIdentifiers(identifiers: List<String>) {
+        val cleaned = identifiers
+            .map { it.trim().uppercase(Locale.ROOT) }
+            .filter { it.isNotEmpty() }
+            .distinct()
+
+        preferences.edit()
+            .putString(
+                KEY_BANK_SMS_IDENTIFIERS,
+                cleaned.joinToString(",")
+            )
+            .apply()
+    }
+
     // Saved SMS sender headers
 
     fun getSavedSenderHeaders(): List<String> {
@@ -313,5 +343,34 @@ class WalletLocalStore(context: Context) {
 
         private const val KEY_SENDER_HEADERS =
             "saved_sender_headers"
+        
+        private const val KEY_BANK_SMS_IDENTIFIERS =
+            "bank_sms_identifiers"
+        
+        private val DEFAULT_BANK_SMS_IDENTIFIERS = listOf(
+            "SBIBNK",
+            "SBIINB",
+            "SBYONO",
+            "ATMSBI",
+            "HDFCBK",
+            "HDFCCN",
+            "ICICIB",
+            "ICICIC",
+            "ICICIP",
+            "KOTAKB",
+            "KOTAKM",
+            "KMBLBK",
+            "UNIONB",
+            "UBIACQ",
+            "CNRBK",
+            "CANARA",
+            "CANMNY",
+            "AUBANK",
+            "AUBMSG",
+            "AUDOST",
+            "INDUSB",
+            "INDUSA",
+            "INDUSO"
+        )
     }
 }

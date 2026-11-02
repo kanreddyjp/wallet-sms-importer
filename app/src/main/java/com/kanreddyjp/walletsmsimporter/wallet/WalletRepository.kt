@@ -102,6 +102,16 @@ class WalletRepository(
         return localStore.getLastProcessedSmsTimestamp()
     }
 
+    // Bank SMS identifiers
+
+    fun getBankSmsIdentifiers(): List<String> {
+        return localStore.getBankSmsIdentifiers()
+    }
+
+    fun saveBankSmsIdentifiers(identifiers: List<String>) {
+        localStore.saveBankSmsIdentifiers(identifiers)
+    }
+
     // Sender-header master list
 
     fun getSavedSenderHeaders(): List<String> {
