@@ -33,6 +33,7 @@ import com.kanreddyjp.walletsmsimporter.wallet.WalletConnectionState
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import androidx.compose.material3.OutlinedButton
 
 @Composable
 fun HomeScreen(
@@ -44,7 +45,8 @@ fun HomeScreen(
     onRefreshWalletAccounts: () -> Unit,
     isRefreshingWalletAccounts: Boolean,
     onCreateTransaction: (SmsMessage) -> Unit,
-    onIgnoreSms: (SmsMessage) -> Unit
+    onIgnoreSms: (SmsMessage) -> Unit,
+    onManageBankHeaders: () -> Unit
 ) {
     var showConnectDialog by remember {
         mutableStateOf(false)
@@ -80,6 +82,15 @@ fun HomeScreen(
 
             Button(onClick = onScanSms) {
                 Text("Scan SMS")
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            OutlinedButton(
+                onClick = onManageBankHeaders,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("Manage Bank SMS Headers")
             }
         }
 

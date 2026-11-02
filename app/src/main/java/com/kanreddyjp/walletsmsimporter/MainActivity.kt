@@ -39,6 +39,7 @@ class MainActivity : ComponentActivity() {
     )
 
     private var savedSenderHeaders by mutableStateOf<List<String>>(emptyList())
+    private var bankSmsIdentifiers by mutableStateOf<List<String>>(emptyList())
     private var isRefreshingWalletAccounts by mutableStateOf(false)
 
     private lateinit var walletTokenStore: WalletTokenStore
@@ -68,6 +69,7 @@ class MainActivity : ComponentActivity() {
         )
 
         savedSenderHeaders = walletRepository.getSavedSenderHeaders()
+        bankSmsIdentifiers = walletRepository.getBankSmsIdentifiers()
 
         if (
             walletTokenStore.hasToken() &&
@@ -102,7 +104,9 @@ class MainActivity : ComponentActivity() {
                 onIgnoreSms = ::ignoreSms,
                 onRefreshSms = ::refreshPendingSms,
                 savedSenderHeaders = savedSenderHeaders,
-                onRemoveSenderHeader = ::removeSenderHeader
+                onRemoveSenderHeader = ::removeSenderHeader,
+                bankSmsIdentifiers = bankSmsIdentifiers,
+                onSaveBankSmsIdentifiers = ::saveBankSmsIdentifiers
             )
         }
     }
@@ -267,5 +271,10 @@ class MainActivity : ComponentActivity() {
                     )
             }
         }
+    }
+
+    private fun saveBankSmsIdentifiers(identifiers: List<String>) {
+        walletRepository.saveBankSmsIdentifiers(identifiers)
+        bankSmsIdentifiers = walletRepository.getBankSmsIdentifiers()
     }
 }
