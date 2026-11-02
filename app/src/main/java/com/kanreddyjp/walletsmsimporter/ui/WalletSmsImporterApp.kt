@@ -2,7 +2,12 @@
 package com.kanreddyjp.walletsmsimporter.ui
 
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -22,6 +27,7 @@ import com.kanreddyjp.walletsmsimporter.wallet.WalletConnectionState
 import com.kanreddyjp.walletsmsimporter.wallet.WalletRecordSubmissionState
 import com.kanreddyjp.walletsmsimporter.ui.screens.BankHeaderManagementScreen
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun WalletSmsImporterApp(
     smsMessages: List<SmsMessage>,
@@ -68,7 +74,27 @@ fun WalletSmsImporterApp(
     }
 
     MaterialTheme {
-        Surface(modifier = Modifier.fillMaxSize()) {
+        Scaffold(
+            topBar = {
+                TopAppBar(
+                    title = {
+                        Text(
+                            text = when {
+                                showBankHeaderManagement -> "Bank SMS Settings"
+                                selectedSms != null && isReviewing -> "Review Transaction"
+                                selectedSms != null -> "Create Transaction"
+                                else -> "Wallet SMS Importer"
+                            }
+                        )
+                    }
+                )
+            }
+        ) { contentPadding ->
+            Surface(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(contentPadding)
+            ) {
             val sms = selectedSms
 
             if (showBankHeaderManagement) {
