@@ -50,6 +50,7 @@ fun TransactionDraftScreen(
     onBackToSmsList: () -> Unit,
     onReview: (
         account: WalletAccount,
+        toAccount: WalletAccount?,
         amount: Double,
         category: WalletCategory?,
         counterParty: String,
@@ -75,6 +76,14 @@ fun TransactionDraftScreen(
                     matches.singleOrNull()
                 }
                 ?: accounts.firstOrNull()
+        )
+    }
+
+    var selectedToAccount by remember(sms, initialDraft, accounts) {
+        mutableStateOf(
+            accounts.firstOrNull {
+                it.id == initialDraft?.toAccountId
+            }
         )
     }
 
@@ -112,6 +121,8 @@ fun TransactionDraftScreen(
         )
     }
 
+    var toAccountMenuExpanded by remember { mutableStateOf(false) }
+    var toAccountSearchQuery by remember(sms.id) { mutableStateOf("") }
     var accountMenuExpanded by remember { mutableStateOf(false) }
     var categoryMenuExpanded by remember { mutableStateOf(false) }
     var accountSearchQuery by remember(sms.id) { mutableStateOf("") }
@@ -167,7 +178,7 @@ fun TransactionDraftScreen(
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(16.dp)
+            horizontalArrangement = Arrangement.spacedBy(4.dp)
         ) {
             Row(
                 modifier = Modifier.weight(1f),
@@ -193,6 +204,24 @@ fun TransactionDraftScreen(
                 )
                 Text(
                     text = "Income",
+                    modifier = Modifier.padding(start = 4.dp)
+                )
+            }
+
+            Row(
+                modifier = Modifier.weight(1f),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                RadioButton(
+                    selected = transactionType == TransactionType.TRANSFER,
+                    onClick = {
+                        transactionType = TransactionType.TRANSFER
+                        selectedCategory = null
+                        categoryMenuExpanded = false
+                    }
+                )
+                Text(
+                    text = "Transfer",
                     modifier = Modifier.padding(start = 4.dp)
                 )
             }
@@ -252,6 +281,63 @@ fun TransactionDraftScreen(
             }
         }
 
+        if (transactionType == TransactionType.TRANSFER) {
+            Column {
+                OutlinedTextField(
+                    value = if (toAccountMenuExpanded) {
+                        toAccountSearchQuery
+                    } else {
+                        selectedToAccount?.name ?: ""
+                    },
+                    onValueChange = {
+                        toAccountSearchQuery = it
+                        toAccountMenuExpanded = true
+                    },
+                    label = { Text("To Account") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                if (toAccountMenuExpanded) {
+                    val filteredAccounts = accounts.filter {
+                        it.id != selectedAccount?.id &&
+                            it.name.contains(toAccountSearchQuery, ignoreCase = true)
+                    }
+
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 4.dp)
+                    ) {
+                        Column(
+                            modifier = Modifier.heightIn(max = 240.dp)
+                        ) {
+                            if (filteredAccounts.isEmpty()) {
+                                Text(
+                                    text = "No matching accounts",
+                                    modifier = Modifier.padding(16.dp)
+                                )
+                            } else {
+                                filteredAccounts.forEach { account ->
+                                    Text(
+                                        text = account.name,
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .clickable {
+                                                selectedToAccount = account
+                                                toAccountSearchQuery = ""
+                                                toAccountMenuExpanded = false
+                                            }
+                                            .padding(16.dp)
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
         OutlinedTextField(
             value = amount,
             onValueChange = { amount = it },
@@ -260,59 +346,61 @@ fun TransactionDraftScreen(
             modifier = Modifier.fillMaxWidth()
         )
 
-        Column {
-            OutlinedTextField(
-                value = if (categoryMenuExpanded) {
-                    categorySearchQuery
-                } else {
-                    selectedCategory?.name ?: ""
-                },
-                onValueChange = {
-                    categorySearchQuery = it
-                    categoryMenuExpanded = true
-                },
-                label = { Text("Category") },
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth()
-            )
+        if (transactionType != TransactionType.TRANSFER) {
+            Column {
+                OutlinedTextField(
+                    value = if (categoryMenuExpanded) {
+                        categorySearchQuery
+                    } else {
+                        selectedCategory?.name ?: ""
+                    },
+                    onValueChange = {
+                        categorySearchQuery = it
+                        categoryMenuExpanded = true
+                    },
+                    label = { Text("Category") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
 
-            if (categoryMenuExpanded) {
-                val filteredCategories = categories.filter { category ->
-                    category.name.contains(categorySearchQuery, ignoreCase = true) ||
-                        category.groupName.orEmpty()
-                            .contains(categorySearchQuery, ignoreCase = true)
-                }
+                if (categoryMenuExpanded) {
+                    val filteredCategories = categories.filter { category ->
+                        category.name.contains(categorySearchQuery, ignoreCase = true) ||
+                            category.groupName.orEmpty()
+                                .contains(categorySearchQuery, ignoreCase = true)
+                    }
 
-                Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(top = 4.dp)
-                ) {
-                    Column(
-                        modifier = Modifier.heightIn(max = 300.dp)
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 4.dp)
                     ) {
-                        if (filteredCategories.isEmpty()) {
-                            Text(
-                                text = "No matching categories",
-                                modifier = Modifier.padding(16.dp)
-                            )
-                        } else {
-                            filteredCategories.forEach { category ->
+                        Column(
+                            modifier = Modifier.heightIn(max = 300.dp)
+                        ) {
+                            if (filteredCategories.isEmpty()) {
                                 Text(
-                                    text = if (category.groupName != null) {
-                                        "${category.name} — ${category.groupName}"
-                                    } else {
-                                        category.name
-                                    },
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .clickable {
-                                            selectedCategory = category
-                                            categorySearchQuery = ""
-                                            categoryMenuExpanded = false
-                                        }
-                                        .padding(16.dp)
+                                    text = "No matching categories",
+                                    modifier = Modifier.padding(16.dp)
                                 )
+                            } else {
+                                filteredCategories.forEach { category ->
+                                    Text(
+                                        text = if (category.groupName != null) {
+                                            "${category.name} — ${category.groupName}"
+                                        } else {
+                                            category.name
+                                        },
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .clickable {
+                                                selectedCategory = category
+                                                categorySearchQuery = ""
+                                                categoryMenuExpanded = false
+                                            }
+                                            .padding(16.dp)
+                                    )
+                                }
                             }
                         }
                     }
@@ -348,10 +436,30 @@ fun TransactionDraftScreen(
                 val parsedAmount = amount.toDoubleOrNull()
                     ?: return@Button
 
+                val destinationAccount = if (
+                    transactionType == TransactionType.TRANSFER
+                ) {
+                    selectedToAccount ?: return@Button
+                } else {
+                    null
+                }
+
+                if (
+                    transactionType == TransactionType.TRANSFER &&
+                    destinationAccount?.id == account.id
+                ) {
+                    return@Button
+                }
+
                 onReview(
                     account,
+                    destinationAccount,
                     parsedAmount,
-                    selectedCategory,
+                    if (transactionType == TransactionType.TRANSFER) {
+                        null
+                    } else {
+                        selectedCategory
+                    },
                     counterParty,
                     note,
                     transactionType,
@@ -361,7 +469,14 @@ fun TransactionDraftScreen(
             enabled = selectedAccount != null &&
                 amount.toDoubleOrNull()?.let {
                     it.isFinite() && it > 0.0
-                } == true,
+                } == true &&
+                (
+                    transactionType != TransactionType.TRANSFER ||
+                        (
+                            selectedToAccount != null &&
+                                selectedToAccount?.id != selectedAccount?.id
+                        )
+                ),
             modifier = Modifier.fillMaxWidth()
         ) {
             Text("Review Transaction")

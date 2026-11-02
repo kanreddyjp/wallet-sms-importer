@@ -1,9 +1,9 @@
-
 package com.kanreddyjp.walletsmsimporter.transaction
 
 enum class TransactionType {
     EXPENSE,
-    INCOME
+    INCOME,
+    TRANSFER
 }
 
 data class TransactionDraft(
@@ -15,5 +15,7 @@ data class TransactionDraft(
     val recordDate: Long,
     val counterParty: String,
     val note: String,
-    val type: TransactionType = TransactionType.EXPENSE
+    val type: TransactionType = TransactionType.EXPENSE,
+    val toAccountId: String? = null,
+    val toAccountName: String? = null
 )

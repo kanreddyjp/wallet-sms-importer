@@ -78,17 +78,28 @@ fun TransactionReviewScreen(
             when (draft.type) {
                 TransactionType.EXPENSE -> "Expense"
                 TransactionType.INCOME -> "Income"
+                TransactionType.TRANSFER -> "Transfer"
             }
         )
 
-        ReviewField("Account", draft.accountName)
+        if (draft.type == TransactionType.TRANSFER) {
+            ReviewField("From Account", draft.accountName)
+            ReviewField(
+                "To Account",
+                draft.toAccountName ?: "Not selected"
+            )
+        } else {
+            ReviewField("Account", draft.accountName)
+        }
 
         ReviewField(
             "Amount",
             String.format(Locale.getDefault(), "%.2f", draft.amount)
         )
 
-        ReviewField("Category", draft.categoryName ?: "Not selected")
+        if (draft.type != TransactionType.TRANSFER) {
+            ReviewField("Category", draft.categoryName ?: "Not selected")
+        }
         ReviewField("Counterparty", draft.counterParty.ifBlank { "Not entered" })
         ReviewField("Note", draft.note.ifBlank { "Not entered" })
         ReviewField("Transaction date", formatDate(draft.recordDate))

@@ -166,12 +166,14 @@ fun WalletSmsImporterApp(
                             },
                             onReview = {
                                 account,
+                                toAccount,
                                 amount,
                                 category,
                                 counterParty,
                                 note,
                                 type,
-                                recordDate  ->
+                                recordDate ->
+
                                 currentDraft = TransactionDraft(
                                     accountId = account.id,
                                     accountName = account.name,
@@ -181,8 +183,11 @@ fun WalletSmsImporterApp(
                                     recordDate = recordDate,
                                     counterParty = counterParty,
                                     note = note,
-                                    type = type
+                                    type = type,
+                                    toAccountId = toAccount?.id,
+                                    toAccountName = toAccount?.name
                                 )
+
                                 isReviewing = true
                             }
                         )
